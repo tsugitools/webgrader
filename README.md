@@ -36,7 +36,7 @@ webgrader/
 
 1. Add the WebGrader tool to a Tsugi course / LTI placement.
 2. Open **Settings** and choose a built-in assignment (copies JSON into the placement).
-3. Optionally open **Edit** to adjust title, prompt, starters, or import full JSON.
+3. Optionally open **Edit** to adjust title, rich-text instructions, starters, or import full JSON.
 4. In **Learner** view, use **Load solution** (instructor only) when a reference `solution` is present.
 5. Use **Student Data** for grades.
 

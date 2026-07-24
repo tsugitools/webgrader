@@ -2,9 +2,9 @@
   "type": "webgrader",
   "schema_version": 1,
   "id": "js-hello-world-001",
-  "assignment_version": 1,
+  "assignment_version": 4,
   "title": "Hello World",
-  "prompt": "<p>Your first JavaScript program: print a message to the console.</p><ul><li>In the JavaScript editor, call <code>console.log</code> with the text <strong>Hello world</strong> (capital H, lowercase w).</li><li>Press <strong>Run / Restart</strong> and check the Console panel — you should see the message there.</li><li>Then press <strong>Grade</strong>.</li></ul><p>Example:</p><pre><code>console.log(\"Hello world\");</code></pre>",
+  "prompt": "<p>Your first JavaScript program: print a message to the console.</p><ul><li>In the JavaScript editor, call <code>console.log</code> with the text <strong>Hello world</strong> (capital H, lowercase w).</li><li>Press <strong>Run / Restart</strong> and check the Console panel — you should see the message there.</li><li>Then press <strong>Grade</strong>.</li></ul>",
   "files": {
     "html": {
       "mode": "hidden",

@@ -13,6 +13,7 @@
     var Console = window.WebGraderConsole;
 
     var FILE_KEYS = ['html', 'css', 'javascript'];
+    var promptEditor = null;
     var saveTimer = null;
     var statusEl = null;
 
@@ -295,12 +296,59 @@
         });
     }
 
+    function sanitizePromptHtml(html) {
+        var raw = String(html || '');
+        if (window.HtmlSanitizer && typeof window.HtmlSanitizer.SanitizeHtml === 'function') {
+            try {
+                return window.HtmlSanitizer.SanitizeHtml(raw);
+            } catch (e) { /* fall through */ }
+        }
+        return raw;
+    }
+
+    function destroyPromptEditor() {
+        if (!promptEditor) return Promise.resolve();
+        var ed = promptEditor;
+        promptEditor = null;
+        return ed.destroy().catch(function () { /* ignore */ });
+    }
+
+    function initPromptEditor() {
+        if (typeof window.ClassicEditor === 'undefined') return;
+        var node = document.querySelector('#auth-prompt');
+        if (!node) return;
+        var config = window.ClassicEditor.defaultConfig || {
+            toolbar: {
+                items: [
+                    'heading', '|', 'bold', 'italic', 'link',
+                    'bulletedList', 'numberedList', 'blockQuote',
+                    'insertTable', 'undo', 'redo'
+                ]
+            }
+        };
+        window.ClassicEditor.create(node, config).then(function (editor) {
+            promptEditor = editor;
+        }).catch(function (err) {
+            console.error('CKEditor init failed', err);
+        });
+    }
+
+    function readPromptField() {
+        if (promptEditor) {
+            try {
+                return promptEditor.getData();
+            } catch (e) { /* fall through */ }
+        }
+        var ta = $('#auth-prompt');
+        return ta ? ta.value : '';
+    }
+
     function renderPrompt(root) {
         var block = el('section', { className: 'prompt-block' });
         var title = exercise.title || 'Untitled assignment';
         block.appendChild(el('h1', { text: title }));
-        var prompt = el('div', { className: 'prompt' });
-        prompt.innerHTML = exercise.prompt || '';
+        var prompt = el('div', { className: 'prompt', id: 'display_instructions' });
+        prompt.innerHTML = sanitizePromptHtml(exercise.prompt || '');
         block.appendChild(prompt);
         root.appendChild(block);
         var titleEl = $('#exerciseTitle');
@@ -649,7 +697,7 @@
 
     function collectExerciseFromForm() {
         var title = ($('#auth-title') || {}).value || '';
-        var prompt = ($('#auth-prompt') || {}).value || '';
+        var prompt = readPromptField();
         var id = ($('#auth-id') || {}).value || exercise.id || 'custom';
         var next = JSON.parse(JSON.stringify(exercise));
         next.type = 'webgrader';
@@ -765,6 +813,12 @@
     }
 
     function renderAuthor() {
+        destroyPromptEditor().then(function () {
+            renderAuthorBody();
+        });
+    }
+
+    function renderAuthorBody() {
         var app = $('#app');
         app.innerHTML = '';
         var titleEl = $('#exerciseTitle');
@@ -773,11 +827,20 @@
         var meta = el('div', { className: 'author-meta' });
         meta.appendChild(labelInput('Title', 'auth-title', exercise.title || ''));
         meta.appendChild(labelInput('Id', 'auth-id', exercise.id || ''));
-        var promptLabel = el('label', { text: 'Prompt (HTML)' });
-        var promptTa = el('textarea', { id: 'auth-prompt', rows: '6' });
+
+        var promptField = el('div', { className: 'author-prompt-field' });
+        promptField.appendChild(el('div', { className: 'field-label', text: 'Instructions' }));
+        var ckWrap = el('div', { className: 'ckeditor-container' });
+        var promptTa = el('textarea', {
+            id: 'auth-prompt',
+            name: 'instructions',
+            rows: '10',
+            'aria-label': 'Assignment instructions'
+        });
         promptTa.value = exercise.prompt || '';
-        promptLabel.appendChild(promptTa);
-        meta.appendChild(promptLabel);
+        ckWrap.appendChild(promptTa);
+        promptField.appendChild(ckWrap);
+        meta.appendChild(promptField);
         app.appendChild(meta);
 
         FILE_KEYS.forEach(function (key) {
@@ -872,6 +935,8 @@
         btnPreview.addEventListener('click', authorRunPreview);
         btnView.addEventListener('click', authorViewJson);
         btnImport.addEventListener('click', authorImportJson);
+
+        initPromptEditor();
     }
 
     function labelInput(labelText, id, value) {

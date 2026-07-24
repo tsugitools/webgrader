@@ -121,6 +121,21 @@ window.WEBGRADER = {
     }
 };
 </script>
+<script src="https://cdn.jsdelivr.net/gh/jitbit/HtmlSanitizer@master/HtmlSanitizer.js"></script>
+<?php if ($mode === 'author' && $isInstructor) : ?>
+<script src="https://cdn.ckeditor.com/ckeditor5/16.0.0/classic/ckeditor.js"></script>
+<script>
+ClassicEditor.defaultConfig = {
+    toolbar: {
+        items: [
+            'heading', '|', 'bold', 'italic', 'link',
+            'bulletedList', 'numberedList', 'blockQuote',
+            'insertTable', 'undo', 'redo'
+        ]
+    }
+};
+</script>
+<?php endif; ?>
 <script src="js/validation.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>
 <script src="js/html-validate.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>
 <script src="js/css-validate.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>

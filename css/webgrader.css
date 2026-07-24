@@ -359,6 +359,36 @@ textarea.code {
     font-size: 0.9rem;
 }
 
+.author-prompt-field {
+    margin: 0.75rem 0 1rem;
+}
+
+.author-prompt-field .field-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.ckeditor-container {
+    min-height: 16em;
+}
+
+.ckeditor-container .ck-editor__editable {
+    min-height: 12em;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .console-list {
     min-height: 120px;
     max-height: 220px;
