@@ -19,7 +19,8 @@
         css_rule_declares: true,
         computed_style_equals: true,
         computed_styles_equals: true,
-        console_includes: true
+        console_includes: true,
+        call_function: true
     };
 
     function isObject(v) {
@@ -128,6 +129,14 @@
                     }
                     if (typeof t.expected === 'undefined') {
                         errors.push('Test ' + (t.id || i) + ' requires expected.');
+                    }
+                }
+                if (t.type === 'call_function') {
+                    if (!t.function || typeof t.function !== 'string') {
+                        errors.push('Test ' + (t.id || i) + ' requires function.');
+                    }
+                    if (t.expect_op !== 'sum' && t.expect_op !== 'square') {
+                        errors.push('Test ' + (t.id || i) + ' expect_op must be "sum" or "square".');
                     }
                 }
                 if (t.type === 'selector_count' || t.type === 'text_equals'

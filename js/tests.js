@@ -255,8 +255,105 @@
                     + (matchMode === 'contains' ? 'to contain' : 'message')
                     + ' "' + expected + '". Saw: ' + (sample || '(empty)')
             };
+        },
+        /**
+         * Call a global function in the student iframe with random ints.
+         * test.name — function name
+         * test.arg_count — number of random args (default 1)
+         * test.random_min / test.random_max — inclusive range (default 2–10)
+         * test.trials — how many random checks (default 3)
+         * test.expect_op — "sum" | "square"
+         */
+        call_function: function (doc, test) {
+            var win = doc && doc.defaultView;
+            if (!win) {
+                return { pass: false, detail: 'Student window is not available. Press Run first.' };
+            }
+            var fnName = test.function || test.name;
+            if (!fnName || typeof fnName !== 'string') {
+                var err = new Error('call_function requires name');
+                err.code = 'config';
+                throw err;
+            }
+            var fn = win[fnName];
+            if (typeof fn !== 'function') {
+                return {
+                    pass: false,
+                    detail: '"' + fnName + '" is not a global function. '
+                        + 'Use a function declaration like: function ' + fnName + '(...) { ... }'
+                };
+            }
+
+            var min = typeof test.random_min === 'number' ? test.random_min : 2;
+            var max = typeof test.random_max === 'number' ? test.random_max : 10;
+            if (max < min) {
+                var err2 = new Error('call_function random_max must be >= random_min');
+                err2.code = 'config';
+                throw err2;
+            }
+            var arity = typeof test.arg_count === 'number' ? test.arg_count : 1;
+            var trials = typeof test.trials === 'number' ? test.trials : 3;
+            var op = String(test.expect_op || '');
+            if (op !== 'sum' && op !== 'square') {
+                var err3 = new Error('call_function expect_op must be "sum" or "square"');
+                err3.code = 'config';
+                throw err3;
+            }
+
+            var details = [];
+            for (var t = 0; t < trials; t++) {
+                var args = [];
+                for (var i = 0; i < arity; i++) {
+                    args.push(randomIntInclusive(min, max));
+                }
+                var expected = expectedFromOp(op, args);
+                var actual;
+                try {
+                    actual = fn.apply(win, args);
+                } catch (e) {
+                    return {
+                        pass: false,
+                        detail: fnName + '(' + args.join(', ') + ') threw: '
+                            + ((e && e.message) ? e.message : String(e))
+                    };
+                }
+                if (actual !== expected) {
+                    return {
+                        pass: false,
+                        detail: fnName + '(' + args.join(', ') + ') returned '
+                            + stringifyCallResult(actual) + ', expected '
+                            + stringifyCallResult(expected)
+                    };
+                }
+                details.push(fnName + '(' + args.join(', ') + ') → ' + expected);
+            }
+            return {
+                pass: true,
+                detail: 'Passed ' + trials + ' trial(s): ' + details.join('; ')
+            };
         }
     };
+
+    function randomIntInclusive(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function expectedFromOp(op, args) {
+        if (op === 'sum') {
+            return args.reduce(function (a, b) { return a + b; }, 0);
+        }
+        if (op === 'square') {
+            return args[0] * args[0];
+        }
+        return undefined;
+    }
+
+    function stringifyCallResult(v) {
+        if (typeof v === 'string') return JSON.stringify(v);
+        if (v === undefined) return 'undefined';
+        if (typeof v === 'number' && isNaN(v)) return 'NaN';
+        return String(v);
+    }
 
     /** Undo JSON.stringify quoting used when capturing string console args. */
     function consoleEntryText(message) {

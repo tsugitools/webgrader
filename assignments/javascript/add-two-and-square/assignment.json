@@ -1,0 +1,62 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "js-add-two-and-square-001",
+  "assignment_version": 1,
+  "title": "Add Two and Square",
+  "prompt": "<p>Write two global functions (use <code>function</code> declarations so they are available to the grader):</p><ul><li><code>add_two(a, b)</code> — return the sum of <code>a</code> and <code>b</code></li><li><code>square(n)</code> — return <code>n</code> times itself</li></ul><p>After you Run, Grade will call your functions with random integers from 2 to 10 and check the return values.</p>",
+  "files": {
+    "html": {
+      "mode": "hidden",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Add Two and Square</title>\n</head>\n<body>\n  <p>Implement <code>add_two</code> and <code>square</code> in the JavaScript tab, then Run and Grade.</p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "hidden",
+      "starter": ""
+    },
+    "javascript": {
+      "mode": "editable",
+      "starter": "function add_two(a, b) {\n  // return the sum of a and b\n\n}\n\nfunction square(n) {\n  // return n * n\n\n}\n"
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "add-two",
+      "name": "add_two returns the sum",
+      "type": "call_function",
+      "function": "add_two",
+      "arg_count": 2,
+      "random_min": 2,
+      "random_max": 10,
+      "trials": 3,
+      "expect_op": "sum",
+      "points": 5,
+      "feedback": "Define function add_two(a, b) { return a + b; }"
+    },
+    {
+      "id": "square",
+      "name": "square returns n * n",
+      "type": "call_function",
+      "function": "square",
+      "arg_count": 1,
+      "random_min": 2,
+      "random_max": 10,
+      "trials": 3,
+      "expect_op": "square",
+      "points": 5,
+      "feedback": "Define function square(n) { return n * n; }"
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "javascript": "function add_two(a, b) {\n  return a + b;\n}\n\nfunction square(n) {\n  return n * n;\n}\n"
+  }
+}

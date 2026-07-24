@@ -20,6 +20,7 @@ $assignments = array(
     'HighlightingWithSpan' => 'CSS: Highlighting with Span',
     'LinkStates' => 'CSS: Link States',
     'HelloWorld' => 'JavaScript: Hello World',
+    'AddTwoAndSquare' => 'JavaScript: Add Two and Square',
 );
 
 /**
@@ -37,6 +38,7 @@ function webgrader_builtin_relpath($key) {
         'HighlightingWithSpan' => 'assignments/html/highlighting-with-span',
         'LinkStates' => 'assignments/css/link-states',
         'HelloWorld' => 'assignments/javascript/hello-world',
+        'AddTwoAndSquare' => 'assignments/javascript/add-two-and-square',
     );
     return isset($map[$key]) ? $map[$key] : null;
 }

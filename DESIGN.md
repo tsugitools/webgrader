@@ -601,6 +601,7 @@ Phase 1 should implement only a small set of high-value declarative tests.
 ### JavaScript / Interaction State
 
 - `console_includes` (match text in the captured Console panel after Run)
+- `call_function` (call a global student function with random ints; `expect_op`: `sum` | `square`)
 - `no_runtime_errors`
 - `request_exists`
 - `request_json_body_equals`

@@ -46,7 +46,7 @@ LTI custom parameter (optional):
 { "key": "exercise", "value": "HeadingsAndParagraphs" }
 ```
 
-Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`, `HelloWorld`.
+Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`, `HelloWorld`, `AddTwoAndSquare`.
 
 ## Learner workflow
 
