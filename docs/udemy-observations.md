@@ -67,9 +67,7 @@ Source: `assignments/html/simple-list/assignment.json`
 
 ## Known-good manual fixtures
 
-- `tests/udemy-export/fixtures/udemy-verified/simple-list/` — Phase 1 HTML (2026-07-24)
-- `tests/udemy-export/fixtures/udemy-verified/coloring-paragraphs/` — Phase 2 CSS (2026-07-24)
-- `tests/udemy-export/fixtures/udemy-verified/add-two-and-square/` — Phase 2 JS (2026-07-24)
+Checked-in verified ZIP member dumps were removed; re-export from the catalog when needed. Live verification dates and assignment ids are recorded above.
 
 ## Implications for the exporter
 

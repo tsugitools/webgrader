@@ -2,11 +2,11 @@
 
 ## Status
 
-Phase 0 (observations), Phase 1 (minimal HTML export), and Phase 2 (CSS + basic JavaScript) implemented.
+Phase 0–2 implemented and verified in live Udemy exercises (HTML, CSS, basic JS). Phase 4 authoring integration (Export to Udemy button + compatibility preview + ZIP download) implemented. Phase 3 (assets / fetch) is deferred indefinitely — the goal is avoiding double-authoring of low-hanging fruit, not exporting every WebGrader assignment.
 
-Phase 1 success criterion met (2026-07-24): exported `simple-list` was entered manually into a Udemy Web Development coding exercise and graded successfully. See `docs/udemy-observations.md`.
+Phase 1 success criterion met (2026-07-24): exported `simple-list` graded successfully in Udemy.
 
-Phase 2 success criterion met (2026-07-24): CSS (`coloring-paragraphs`) and JS (`add-two-and-square`) packages graded successfully in Udemy. WebGrader-only checks (`html_validate`, `css_validate`, `css_rule_declares`, `console_includes`) are skipped with explicit warnings.
+Phase 2 success criterion met (2026-07-24): CSS (`coloring-paragraphs`) and JS (`add-two-and-square`) graded successfully in Udemy.
 
 Proposed design for exporting compatible WebGrader assignments into files used to author Udemy Web Development coding exercises.
 
@@ -636,7 +636,9 @@ Success criterion:
 
 ### Phase 3 — Assets and Fetch Experiments
 
-Add cautiously:
+**Deferred.** Not required for avoiding double-authoring of introductory HTML/CSS/JS exercises.
+
+Add cautiously when needed:
 
 - Export asset directory
 - Asset compatibility statuses
@@ -653,13 +655,7 @@ Success criterion:
 
 ### Phase 4 — Authoring Integration
 
-Add:
-
-- Improved **Export to Udemy** authoring integration
-- Compatibility preview before ZIP generation
-- Per-test export status
-- Suggested repairs for unsupported tests
-- Export regression tests in CI
+Implemented (lite): Edit-mode **Export to Udemy** button, compatibility preview (per-test status, warnings, errors, suggested repairs), and ZIP download via `export-udemy.php`. CLI export remains available for development.
 
 Success criterion:
 

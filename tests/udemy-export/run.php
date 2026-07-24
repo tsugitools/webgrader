@@ -188,6 +188,32 @@ $lpkg = UdemyExporter::build($links, array('repo_root' => $repoRoot));
 assert_true(!$lpkg->ok, 'link-states export not ok');
 assert_eq($lpkg->compatibility, 'unsupported', 'link-states unsupported');
 
+echo "UdemyExporter preview_only + test statuses\n";
+$preview = UdemyExporter::build($assignment, array(
+    'repo_root' => $repoRoot,
+    'preview_only' => true,
+));
+assert_true($preview->ok, 'preview_only export ok');
+assert_true($preview->zip_bytes === null, 'preview_only skips ZIP bytes');
+assert_true(is_array($preview->test_statuses) && count($preview->test_statuses) === 4,
+    'simple-list has 4 test statuses');
+$exports = array();
+foreach ($preview->test_statuses as $t) {
+    $exports[] = $t['export'];
+}
+assert_true(!in_array('unsupported', $exports, true), 'simple-list tests converted');
+
+$hpreview = UdemyExporter::build($headings, array(
+    'repo_root' => $repoRoot,
+    'preview_only' => true,
+));
+$skipped = 0;
+foreach ($hpreview->test_statuses as $t) {
+    if ($t['export'] === 'skipped') $skipped++;
+}
+assert_true($skipped >= 1, 'headings soft-skips html_validate in statuses');
+assert_true(is_array($hpreview->repairs), 'repairs array present');
+
 echo "UdemyExporter strict mode\n";
 $strict = UdemyExporter::build($assignment, array(
     'repo_root' => $repoRoot,

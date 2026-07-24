@@ -16,7 +16,7 @@ Phase 0–1 implemented:
 
 Later phases (mock `fetch`, rich authoring) are described in [DESIGN.md](DESIGN.md).
 
-Udemy export (Phase 1–2 CLI) is described in [UDEMY_EXPORT.md](UDEMY_EXPORT.md). Live Udemy verification (2026-07-24): HTML `simple-list`, CSS `coloring-paragraphs`, and JS `add-two-and-square`. See [docs/udemy-observations.md](docs/udemy-observations.md).
+Udemy export (Phase 1–2 + Phase 4 authoring UI) is described in [UDEMY_EXPORT.md](UDEMY_EXPORT.md). Live Udemy verification (2026-07-24): HTML `simple-list`, CSS `coloring-paragraphs`, and JS `add-two-and-square`. In Edit mode, use **Export to Udemy**. See [docs/udemy-observations.md](docs/udemy-observations.md).
 
 ## Tool layout
 
@@ -128,29 +128,23 @@ The grader always runs `html_validate` then `css_validate` before other tests (r
 | Autosave | `student-save.php` + localStorage backup |
 | Catalog | Directory + `assignment.json` under `assignments/` |
 
-## Udemy export (Phase 1–2)
+## Udemy export (Phase 1–2 + Phase 4)
 
-Export a compatible WebGrader assignment to a reviewable ZIP for manual paste into a Udemy Web Development coding exercise:
+In **Edit** mode, click **Export to Udemy** to preview compatibility (per-test status, warnings, repairs) and download a ZIP for manual paste into a Udemy Web Development coding exercise.
+
+CLI (optional / CI):
 
 ```bash
 php scripts/export-udemy.php \
   assignments/html/simple-list/assignment.json \
   --output simple-list-udemy.zip
-
-php scripts/export-udemy.php \
-  assignments/css/coloring-paragraphs/assignment.json \
-  --output coloring-paragraphs-udemy.zip
-
-php scripts/export-udemy.php \
-  assignments/javascript/add-two-and-square/assignment.json \
-  --output add-two-and-square-udemy.zip
 ```
 
 The ZIP contains `starter.html`, `solution.html`, `evaluation.js` (Jasmine), instructions, `manifest.json`, and `COMPATIBILITY.md`.
 
 Phase 2 adds computed-style tests, `call_function` / function checks, HTML/CSS/JS suite grouping, and soft-skips for WebGrader-only validators (`html_validate`, `css_validate`). Optional local CSS verification: `npm i jsdom` (looked up from `node_modules`).
 
-Unsupported without conversion: `css_rule_declares`, `console_includes`, assets, mock fetch.
+Unsupported without conversion: `css_rule_declares`, `console_includes`, assets, mock fetch. Phase 3 (assets/fetch) is deferred.
 
 Regression tests:
 

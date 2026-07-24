@@ -449,3 +449,43 @@ textarea.code {
 .console-error .console-msg,
 .console-exception .console-msg,
 .console-rejection .console-msg { color: #ff8a7a; }
+
+/* Udemy export panel (author mode) */
+.udemy-export-panel {
+    margin: 1rem 0 1.25rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.85rem 1rem 1rem;
+}
+
+.udemy-export-panel h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+}
+
+.udemy-export-panel h3 {
+    margin: 0.85rem 0 0.35rem;
+    font-size: 0.95rem;
+}
+
+.udemy-compat {
+    font-weight: 600;
+    margin: 0.35rem 0;
+}
+
+.udemy-compat-compatible { color: var(--ok); }
+.udemy-compat-compatible_with_warnings { color: #9a6700; }
+.udemy-compat-unsupported { color: var(--fail); }
+
+.udemy-test-list,
+.udemy-warn-list,
+.udemy-error-list,
+.udemy-repair-list {
+    margin: 0.25rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.udemy-test-converted { color: var(--ok); }
+.udemy-test-skipped { color: #9a6700; }
+.udemy-test-unsupported { color: var(--fail); }

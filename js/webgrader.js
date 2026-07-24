@@ -812,6 +812,184 @@
         }
     }
 
+    function messageOf(item) {
+        if (!item) return '';
+        if (typeof item === 'string') return item;
+        return item.message || item.detail || JSON.stringify(item);
+    }
+
+    function renderUdemyPanel(report) {
+        var host = $('#udemyExportPanel');
+        if (!host) return;
+        host.innerHTML = '';
+        host.hidden = false;
+
+        var level = report.compatibility || 'unsupported';
+        var title = el('h2', { text: 'Udemy export' });
+        host.appendChild(title);
+
+        var status = el('p', {
+            className: 'udemy-compat udemy-compat-' + level,
+            text: 'Compatibility: ' + String(level).replace(/_/g, ' ')
+        });
+        host.appendChild(status);
+
+        if (report.download_name) {
+            host.appendChild(el('p', {
+                className: 'muted',
+                text: 'Package: ' + report.download_name
+            }));
+        }
+
+        if (report.tests && report.tests.length) {
+            host.appendChild(el('h3', { text: 'Tests' }));
+            var list = el('ul', { className: 'udemy-test-list' });
+            report.tests.forEach(function (t) {
+                var li = el('li', {
+                    className: 'udemy-test-' + (t.export || 'unsupported')
+                });
+                li.appendChild(el('strong', {
+                    text: (t.export || '?') + ': '
+                }));
+                li.appendChild(document.createTextNode(
+                    (t.name || t.id || '') + ' (' + (t.type || '?') + ') — '
+                    + (t.message || '')
+                ));
+                list.appendChild(li);
+            });
+            host.appendChild(list);
+        }
+
+        if (report.warnings && report.warnings.length) {
+            host.appendChild(el('h3', { text: 'Warnings' }));
+            var wl = el('ul', { className: 'udemy-warn-list' });
+            report.warnings.forEach(function (w) {
+                wl.appendChild(el('li', { text: messageOf(w) }));
+            });
+            host.appendChild(wl);
+        }
+
+        if (report.errors && report.errors.length) {
+            host.appendChild(el('h3', { text: 'Errors' }));
+            var elist = el('ul', { className: 'udemy-error-list' });
+            report.errors.forEach(function (err) {
+                elist.appendChild(el('li', { text: messageOf(err) }));
+            });
+            host.appendChild(elist);
+        }
+
+        if (report.repairs && report.repairs.length) {
+            host.appendChild(el('h3', { text: 'Suggested repairs' }));
+            var rl = el('ul', { className: 'udemy-repair-list' });
+            report.repairs.forEach(function (r) {
+                rl.appendChild(el('li', { text: r }));
+            });
+            host.appendChild(rl);
+        }
+
+        var actions = el('div', { className: 'btn-row' });
+        var btnDl = el('button', {
+            type: 'button',
+            className: 'btn btn-primary',
+            text: 'Download ZIP',
+            id: 'btnUdemyDownload'
+        });
+        if (!report.ok) {
+            btnDl.disabled = true;
+            btnDl.title = 'Fix export errors before downloading';
+        }
+        var btnClose = el('button', {
+            type: 'button',
+            className: 'btn btn-ghost',
+            text: 'Close'
+        });
+        actions.appendChild(btnDl);
+        actions.appendChild(btnClose);
+        host.appendChild(actions);
+
+        btnClose.addEventListener('click', function () {
+            host.hidden = true;
+            host.innerHTML = '';
+        });
+        btnDl.addEventListener('click', function () {
+            authorDownloadUdemyZip();
+        });
+    }
+
+    function authorExportUdemyPreview() {
+        var next = collectExerciseFromForm();
+        var v = Validation.validateAssignment(next);
+        if (!v.ok) {
+            setStatus('error', v.errors[0] || 'Invalid assignment');
+            return;
+        }
+        if (!cfg.urls || !cfg.urls.exportUdemy) {
+            setStatus('error', 'Export URL missing');
+            return;
+        }
+        setStatus('pending', 'Checking Udemy compatibility…');
+        fetch(cfg.urls.exportUdemy, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exercise: next, action: 'preview' })
+        }).then(function (resp) {
+            return resp.json().catch(function () { return {}; }).then(function (body) {
+                if (!resp.ok && body.status === 'failure' && !body.compatibility) {
+                    setStatus('error', body.detail || 'Export preview failed');
+                    return;
+                }
+                renderUdemyPanel(body);
+                if (body.ok) {
+                    setStatus('success', 'Compatible — review the report, then Download ZIP');
+                } else {
+                    setStatus('error', 'Not exportable — see Udemy export panel');
+                }
+            });
+        }).catch(function (err) {
+            setStatus('error', err.message || 'Export preview failed');
+        });
+    }
+
+    function authorDownloadUdemyZip() {
+        var next = collectExerciseFromForm();
+        if (!cfg.urls || !cfg.urls.exportUdemy) {
+            setStatus('error', 'Export URL missing');
+            return;
+        }
+        setStatus('pending', 'Building Udemy ZIP…');
+        fetch(cfg.urls.exportUdemy, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exercise: next, action: 'download' })
+        }).then(function (resp) {
+            var ctype = (resp.headers.get('Content-Type') || '').toLowerCase();
+            if (ctype.indexOf('application/zip') !== -1) {
+                return resp.blob().then(function (blob) {
+                    var disp = resp.headers.get('Content-Disposition') || '';
+                    var match = /filename="?([^";]+)"?/i.exec(disp);
+                    var name = match ? match[1] : 'udemy-export.zip';
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url;
+                    a.download = name;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    setStatus('success', 'Downloaded ' + name);
+                });
+            }
+            return resp.json().catch(function () { return {}; }).then(function (body) {
+                renderUdemyPanel(body);
+                setStatus('error', body.detail || 'Download failed');
+            });
+        }).catch(function (err) {
+            setStatus('error', err.message || 'Download failed');
+        });
+    }
+
     function renderAuthor() {
         destroyPromptEditor().then(function () {
             renderAuthorBody();
@@ -902,14 +1080,28 @@
         var btnImport = el('button', {
             type: 'button', className: 'btn btn-ghost', text: 'Import JSON'
         });
+        var btnUdemy = el('button', {
+            type: 'button',
+            className: 'btn btn-secondary',
+            id: 'btnExportUdemy',
+            text: 'Export to Udemy'
+        });
         statusEl = el('span', { className: 'status status-pending' });
         actions.appendChild(btnSave);
         actions.appendChild(btnSaveLearner);
         actions.appendChild(btnPreview);
+        actions.appendChild(btnUdemy);
         actions.appendChild(btnView);
         actions.appendChild(btnImport);
         actions.appendChild(statusEl);
         app.appendChild(actions);
+
+        var udemyPanel = el('section', {
+            className: 'udemy-export-panel',
+            id: 'udemyExportPanel'
+        });
+        udemyPanel.hidden = true;
+        app.appendChild(udemyPanel);
 
         var previewWrap = el('section', { className: 'preview-block' });
         previewWrap.appendChild(el('h2', { text: 'Preview' }));
@@ -933,6 +1125,7 @@
         btnSave.addEventListener('click', authorSave);
         btnSaveLearner.addEventListener('click', authorSaveAndLearner);
         btnPreview.addEventListener('click', authorRunPreview);
+        btnUdemy.addEventListener('click', authorExportUdemyPreview);
         btnView.addEventListener('click', authorViewJson);
         btnImport.addEventListener('click', authorImportJson);
 

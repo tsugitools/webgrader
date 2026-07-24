@@ -57,6 +57,7 @@ $gradeSubmitUrl = addSession($CFG->wwwroot . '/api/grade-submit.php');
 $recordAttemptUrl = addSession($CFG->wwwroot . '/api/record-attempt.php');
 $saveUrl = addSession('save.php');
 $studentSaveUrl = addSession('student-save.php');
+$exportUdemyUrl = addSession('export-udemy.php');
 $learnerUrl = addSession('index.php');
 $authorUrl = addSession('index.php?mode=author');
 $assetBust = webgrader_asset_bust();
@@ -113,6 +114,7 @@ window.WEBGRADER = {
     urls: {
         save: <?php echo json_encode($saveUrl); ?>,
         studentSave: <?php echo json_encode($studentSaveUrl); ?>,
+        exportUdemy: <?php echo json_encode($exportUdemyUrl); ?>,
         gradeSubmit: <?php echo json_encode($gradeSubmitUrl); ?>,
         recordAttempt: <?php echo json_encode($recordAttemptUrl); ?>,
         persistKey: <?php echo json_encode($persistKey); ?>,

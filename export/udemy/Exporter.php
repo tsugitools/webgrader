@@ -183,9 +183,12 @@ class UdemyExporter
         ) . "\n";
 
         $zipBytes = null;
-        if ($ok) {
+        if ($ok && empty($options['preview_only'])) {
             $zipBytes = UdemyZipBuilder::build($members);
         }
+
+        $testStatuses = self::buildTestStatuses($tests, $emitted);
+        $repairs = self::suggestRepairs($errors, $warnings, $testStatuses);
 
         return (object) array(
             'ok' => $ok,
@@ -194,6 +197,10 @@ class UdemyExporter
             'warnings' => $warnings,
             'errors' => $errors,
             'converted_tests' => $emitted['converted'],
+            'skipped_tests' => isset($emitted['skipped']) ? $emitted['skipped'] : array(),
+            'test_statuses' => $testStatuses,
+            'repairs' => $repairs,
+            'compatibility_md' => $report['markdown'],
             'zip_bytes' => $zipBytes,
             'download_name' => self::downloadName($assignment),
         );
@@ -384,6 +391,130 @@ class UdemyExporter
                 );
             }
         }
+    }
+
+    /**
+     * Per-test export status for authoring preview.
+     *
+     * @param array $tests
+     * @param array $emitted
+     * @return array
+     */
+    private static function buildTestStatuses(array $tests, array $emitted)
+    {
+        $convertedById = array();
+        foreach ($emitted['converted'] as $c) {
+            $convertedById[$c['id']] = $c;
+        }
+        $skippedById = array();
+        if (!empty($emitted['skipped']) && is_array($emitted['skipped'])) {
+            foreach ($emitted['skipped'] as $s) {
+                if (isset($s['id'])) {
+                    $skippedById[$s['id']] = $s;
+                }
+            }
+        }
+        $errorById = array();
+        foreach ($emitted['errors'] as $e) {
+            if (!is_array($e) || empty($e['message'])) {
+                continue;
+            }
+            if (preg_match('/(?:test\s+")([^"]+)"/i', $e['message'], $m)
+                || preg_match('/"([^"]+)"/', $e['message'], $m)
+            ) {
+                $errorById[$m[1]] = $e;
+            }
+        }
+
+        $out = array();
+        foreach ($tests as $index => $test) {
+            if (!is_array($test)) {
+                continue;
+            }
+            $id = isset($test['id']) ? (string) $test['id'] : ('index-' . $index);
+            $type = isset($test['type']) ? (string) $test['type'] : '';
+            $name = isset($test['name']) ? (string) $test['name'] : $id;
+            if (isset($convertedById[$id])) {
+                $out[] = array(
+                    'id' => $id,
+                    'type' => $type,
+                    'name' => $name,
+                    'export' => 'converted',
+                    'message' => 'Exported to Jasmine.',
+                );
+            } elseif (isset($skippedById[$id])) {
+                $out[] = array(
+                    'id' => $id,
+                    'type' => $type,
+                    'name' => $name,
+                    'export' => 'skipped',
+                    'message' => 'WebGrader-only; omitted from Udemy Jasmine with a warning.',
+                );
+            } elseif (isset($errorById[$id])) {
+                $out[] = array(
+                    'id' => $id,
+                    'type' => $type,
+                    'name' => $name,
+                    'export' => 'unsupported',
+                    'message' => $errorById[$id]['message'],
+                );
+            } else {
+                $out[] = array(
+                    'id' => $id,
+                    'type' => $type,
+                    'name' => $name,
+                    'export' => 'unsupported',
+                    'message' => $type !== ''
+                        ? ('Not exported (' . $type . ').')
+                        : 'Not exported.',
+                );
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Short instructor-facing repair suggestions.
+     *
+     * @param array $errors
+     * @param array $warnings
+     * @param array $testStatuses
+     * @return string[]
+     */
+    private static function suggestRepairs(array $errors, array $warnings, array $testStatuses)
+    {
+        $repairs = array();
+        $types = array();
+        foreach ($testStatuses as $t) {
+            if (isset($t['type'])) {
+                $types[$t['type']] = true;
+            }
+        }
+
+        if (!empty($types['html_validate']) || !empty($types['css_validate'])) {
+            $repairs[] = 'HTML/CSS validator tests stay in WebGrader only; they are skipped for Udemy. Keep declarative DOM or computed-style tests for Udemy grading.';
+        }
+        if (!empty($types['css_rule_declares'])) {
+            $repairs[] = 'Replace css_rule_declares with computed_style_equals where the style is observable, or keep the exercise WebGrader-only for :hover/:visited rules.';
+        }
+        if (!empty($types['console_includes'])) {
+            $repairs[] = 'console_includes is not exported yet. Prefer call_function / DOM assertions for Udemy, or keep this exercise WebGrader-only.';
+        }
+
+        foreach ($errors as $e) {
+            $code = is_array($e) && isset($e['code']) ? $e['code'] : '';
+            if ($code === 'MISSING_SOLUTION') {
+                $repairs[] = 'Add a reference solution (Edit → Reference solution, or solution.html in JSON) before exporting.';
+            } elseif ($code === 'ASSETS_NOT_EXPORTED' || $code === 'MISSING_ASSET') {
+                $repairs[] = 'Asset export is deferred. Remove required assets for Udemy, or wait for a later exporter phase.';
+            } elseif ($code === 'NO_CONVERTIBLE_TESTS') {
+                $repairs[] = 'Add at least one declarative test Udemy can run (selector_*, text_*, attribute_*, computed_style_*, call_function).';
+            } elseif ($code === 'STARTER_PASSES_ALL' || $code === 'STARTER_MATCHES_SOLUTION') {
+                $repairs[] = 'Make the starter incomplete so learners have work to do before Check solution.';
+            }
+        }
+
+        return array_values(array_unique($repairs));
     }
 
     /**
