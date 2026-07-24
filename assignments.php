@@ -18,6 +18,7 @@ $assignments = array(
     'FourCorners' => 'CSS: Four Corners',
     'PuttingTheCascade' => 'CSS: Putting the Cascade in CSS',
     'HighlightingWithSpan' => 'CSS: Highlighting with Span',
+    'LinkStates' => 'CSS: Link States',
 );
 
 /**
@@ -33,6 +34,7 @@ function webgrader_builtin_relpath($key) {
         'FourCorners' => 'assignments/css/four-corners',
         'PuttingTheCascade' => 'assignments/css/putting-the-cascade',
         'HighlightingWithSpan' => 'assignments/html/highlighting-with-span',
+        'LinkStates' => 'assignments/css/link-states',
     );
     return isset($map[$key]) ? $map[$key] : null;
 }

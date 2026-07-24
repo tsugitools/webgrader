@@ -31,7 +31,135 @@
 
     function exerciseNeedsCssValidate(exercise) {
         var tests = exercise && Array.isArray(exercise.tests) ? exercise.tests : [];
-        return tests.some(function (t) { return t && t.type === 'css_validate'; });
+        return tests.some(function (t) {
+            return t && (t.type === 'css_validate' || t.type === 'css_rule_declares');
+        });
+    }
+
+    function normalizeSelector(sel) {
+        return String(sel || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function isColorPropertyName(prop) {
+        var p = String(prop || '').toLowerCase();
+        return p === 'color' || p.indexOf('color') !== -1 || p === 'fill' || p === 'stroke';
+    }
+
+    function normalizeColorValue(value, doc) {
+        var raw = String(value || '').trim();
+        if (!raw) return raw;
+        var root = doc || document;
+        var win = root.defaultView || window;
+        var body = root.body || document.body;
+        if (!body || !win.getComputedStyle) return raw;
+        var probe = root.createElement
+            ? root.createElement('div')
+            : document.createElement('div');
+        probe.style.color = raw;
+        body.appendChild(probe);
+        var resolved = win.getComputedStyle(probe).color;
+        body.removeChild(probe);
+        return (resolved || raw).trim();
+    }
+
+    /**
+     * Check that student CSS includes a rule for selector declaring property=expected.
+     * Used for :visited / :hover / :active where computed style is unreliable.
+     * @returns {Promise<{pass:boolean, detail:string, bypass?:boolean}>}
+     */
+    function ruleDeclares(css, test, options) {
+        options = options || {};
+        test = test || {};
+        var wantSel = normalizeSelector(test.selector);
+        var prop = String(test.property || '').trim().toLowerCase();
+        var expected = test.expected;
+        if (!wantSel || !prop || typeof expected === 'undefined') {
+            return Promise.resolve({
+                pass: false,
+                detail: 'css_rule_declares requires selector, property, and expected.'
+            });
+        }
+
+        return load().then(function (csstree) {
+            var ast;
+            try {
+                ast = csstree.parse(String(css || ''), {
+                    positions: true,
+                    onParseError: function () { /* collect via empty match */ }
+                });
+            } catch (e) {
+                return {
+                    pass: false,
+                    detail: 'Could not parse CSS: ' + ((e && e.message) || String(e))
+                };
+            }
+
+            var foundSelector = false;
+            var foundValues = [];
+
+            csstree.walk(ast, {
+                visit: 'Rule',
+                enter: function (rule) {
+                    if (!rule.prelude) return;
+                    var prelude = normalizeSelector(csstree.generate(rule.prelude));
+                    var parts = prelude.split(',').map(normalizeSelector);
+                    if (parts.indexOf(wantSel) === -1) return;
+                    foundSelector = true;
+                    if (!rule.block || !rule.block.children) return;
+                    rule.block.children.forEach(function (child) {
+                        if (!child || child.type !== 'Declaration') return;
+                        if (String(child.property || '').toLowerCase() !== prop) return;
+                        foundValues.push(csstree.generate(child.value).trim());
+                    });
+                }
+            });
+
+            if (!foundSelector) {
+                return {
+                    pass: false,
+                    detail: 'No rule found for selector "' + wantSel + '".'
+                };
+            }
+            if (!foundValues.length) {
+                return {
+                    pass: false,
+                    detail: 'Found "' + wantSel + '" but it does not set ' + prop + '.'
+                };
+            }
+
+            var want = String(expected).trim();
+            var doc = options.doc || document;
+            if (isColorPropertyName(prop)) {
+                want = normalizeColorValue(want, doc);
+            }
+
+            var matched = foundValues.some(function (actual) {
+                var got = actual;
+                if (isColorPropertyName(prop)) {
+                    got = normalizeColorValue(actual, doc);
+                }
+                return got === want || actual === String(expected).trim();
+            });
+
+            if (matched) {
+                return {
+                    pass: true,
+                    detail: wantSel + ' { ' + prop + ': ' + String(expected).trim() + '; }'
+                };
+            }
+            return {
+                pass: false,
+                detail: 'Found ' + prop + ': ' + foundValues.join(' | ')
+                    + ' on "' + wantSel + '", expected "' + String(expected).trim() + '".'
+            };
+        }).catch(function (err) {
+            var reason = (err && err.message) ? err.message : String(err);
+            return {
+                pass: true,
+                bypass: true,
+                detail: 'CSS rule checker unavailable — credited automatically. (' + reason + ')'
+            };
+        });
     }
 
     /**
@@ -265,6 +393,7 @@
         CDN_URL: CDN_URL,
         load: load,
         exerciseNeedsCssValidate: exerciseNeedsCssValidate,
-        validateCssSource: validateCssSource
+        validateCssSource: validateCssSource,
+        ruleDeclares: ruleDeclares
     };
 })(window);

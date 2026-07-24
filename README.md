@@ -45,7 +45,7 @@ LTI custom parameter (optional):
 { "key": "exercise", "value": "HeadingsAndParagraphs" }
 ```
 
-Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`.
+Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`.
 
 ## Learner workflow
 
@@ -95,6 +95,22 @@ Assignments may include a test with `"type": "css_validate"`. That loads [css-tr
 - **`syntax`**: braces + parse only (skip property/value matching).
 
 CDN/library failure credits the test automatically, same as HTML validation.
+
+### CSS rule checks (link pseudo-classes)
+
+`:visited` / `:hover` / `:active` cannot be graded reliably from computed style (browser privacy and no real pointer). Assignments may use `"type": "css_rule_declares"` to require a selector/property/value in the student CSS source (via css-tree).
+
+```json
+{
+  "id": "hover-green",
+  "name": "a:hover is green",
+  "type": "css_rule_declares",
+  "selector": "a:hover",
+  "property": "color",
+  "expected": "green",
+  "points": 2
+}
+```
 
 The grader always runs `html_validate` then `css_validate` before other tests (results panel order matches), even if they appear later in the assignment JSON.
 

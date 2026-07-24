@@ -1,0 +1,84 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "css-link-states-001",
+  "assignment_version": 4,
+  "title": "Link States",
+  "prompt": "<p>Links change appearance for different states. Style the links on the page using the <strong>LVHA</strong> order (<strong>L</strong>ink, <strong>V</strong>isited, <strong>H</strong>over, <strong>A</strong>ctive) so later states can override earlier ones:</p><ol><li><code>a:link</code> — unvisited — <code>color: blue</code></li><li><code>a:visited</code> — visited — <code>color: purple</code></li><li><code>a:hover</code> — pointer over the link — <code>color: green</code></li><li><code>a:active</code> — while pressing — <code>color: red</code></li></ol><p>There are three links (<strong>W3C</strong>, <strong>MDN</strong>, and <strong>Master Programmer</strong>); the same rules should apply to all of them. After you Run, try hovering and clicking to see the states. Read more on <a href=\"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Text_styling/Styling_links\" target=\"_blank\" rel=\"noopener\">MDN: Styling links</a>.</p>",
+  "files": {
+    "html": {
+      "mode": "readonly",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Link States</title>\n</head>\n<body>\n  <h1>Link States</h1>\n  <p><a id=\"w3c\" href=\"https://www.w3.org/\" target=\"_blank\" rel=\"noopener\">W3C</a></p>\n  <p><a id=\"docs\" href=\"https://developer.mozilla.org/\" target=\"_blank\" rel=\"noopener\">MDN</a></p>\n  <p><a id=\"master\" href=\"https://www.masterprogrammer.com/\" target=\"_blank\" rel=\"noopener\">Master Programmer</a></p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "editable",
+      "starter": "/* LVHA: Link, Visited, Hover, Active */\n\n"
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "css-valid",
+      "name": "CSS validates",
+      "type": "css_validate",
+      "mode": "recommended",
+      "points": 2,
+      "feedback": "Fix the CSS validation errors shown in the test details."
+    },
+    {
+      "id": "link-blue",
+      "name": "a:link is blue",
+      "type": "css_rule_declares",
+      "selector": "a:link",
+      "property": "color",
+      "expected": "blue",
+      "points": 2,
+      "feedback": "Add a:link { color: blue; }"
+    },
+    {
+      "id": "visited-purple",
+      "name": "a:visited is purple",
+      "type": "css_rule_declares",
+      "selector": "a:visited",
+      "property": "color",
+      "expected": "purple",
+      "points": 2,
+      "feedback": "Add a:visited { color: purple; }"
+    },
+    {
+      "id": "hover-green",
+      "name": "a:hover is green",
+      "type": "css_rule_declares",
+      "selector": "a:hover",
+      "property": "color",
+      "expected": "green",
+      "points": 2,
+      "feedback": "Add a:hover { color: green; }"
+    },
+    {
+      "id": "active-red",
+      "name": "a:active is red",
+      "type": "css_rule_declares",
+      "selector": "a:active",
+      "property": "color",
+      "expected": "red",
+      "points": 2,
+      "feedback": "Add a:active { color: red; }"
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "css": "/* LVHA: Link, Visited, Hover, Active */\n\na:link {\n  color: blue;\n}\n\na:visited {\n  color: purple;\n}\n\na:hover {\n  color: green;\n}\n\na:active {\n  color: red;\n}\n"
+  }
+}

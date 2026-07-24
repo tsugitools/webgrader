@@ -377,6 +377,33 @@
                 }).then(runNext);
             }
 
+            if (test.type === 'css_rule_declares') {
+                if (!CV || !CV.ruleDeclares) {
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'CSS rule checker unavailable — credited automatically.'
+                    }, 'pass');
+                    return runNext();
+                }
+                var cssForRule = options.cssSource;
+                if (typeof cssForRule !== 'string') {
+                    cssForRule = '';
+                }
+                return CV.ruleDeclares(cssForRule, test, { doc: doc }).then(function (outcome) {
+                    if (outcome && outcome.bypass) {
+                        earned += pushResult(results, test, points, outcome, 'pass');
+                    } else {
+                        earned += pushResult(results, test, points, outcome, 'fail');
+                    }
+                }).catch(function (err) {
+                    var reason = (err && err.message) ? err.message : String(err);
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'CSS rule checker unavailable — credited automatically. (' + reason + ')'
+                    }, 'pass');
+                }).then(runNext);
+            }
+
             var handler = handlers[test.type];
             if (!handler) {
                 configError = 'Unsupported test type: ' + test.type;

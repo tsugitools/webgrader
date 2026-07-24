@@ -586,12 +586,14 @@ Phase 1 should implement only a small set of high-value declarative tests.
 - `attribute_exists`
 - `html_validate` (optional; loads html-validate from a pinned CDN ES module only when present)
 - `css_validate` (optional; loads css-tree from a pinned CDN ES module only when present)
+- `css_rule_declares` (require a selector/property in CSS source — for `:visited` / `:hover` / `:active`)
 
 ### CSS
 
 - `computed_style_equals`
 - `computed_styles_equals` (several properties on one element)
 - `css_validate` (see above)
+- `css_rule_declares` (see above)
 - `element_visible`
 - `element_hidden`
 - basic geometry comparison such as same row, stacked, or ordered position

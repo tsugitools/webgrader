@@ -16,6 +16,7 @@
         attribute_exists: true,
         html_validate: true,
         css_validate: true,
+        css_rule_declares: true,
         computed_style_equals: true,
         computed_styles_equals: true
     };
@@ -115,6 +116,17 @@
                     }
                     if (t.preset != null && typeof t.preset !== 'string') {
                         errors.push('Test ' + (t.id || i) + ' preset must be a string when set.');
+                    }
+                }
+                if (t.type === 'css_rule_declares') {
+                    if (!t.selector || typeof t.selector !== 'string') {
+                        errors.push('Test ' + (t.id || i) + ' requires selector.');
+                    }
+                    if (!t.property || typeof t.property !== 'string') {
+                        errors.push('Test ' + (t.id || i) + ' requires property.');
+                    }
+                    if (typeof t.expected === 'undefined') {
+                        errors.push('Test ' + (t.id || i) + ' requires expected.');
                     }
                 }
                 if (t.type === 'selector_count' || t.type === 'text_equals'
