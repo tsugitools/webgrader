@@ -16,7 +16,8 @@
         attribute_exists: true,
         html_validate: true,
         css_validate: true,
-        computed_style_equals: true
+        computed_style_equals: true,
+        computed_styles_equals: true
     };
 
     function isObject(v) {
@@ -99,7 +100,8 @@
                 if (t.type === 'selector_exists' || t.type === 'selector_not_exists'
                     || t.type === 'selector_count' || t.type === 'text_equals'
                     || t.type === 'text_contains' || t.type === 'attribute_equals'
-                    || t.type === 'attribute_exists' || t.type === 'computed_style_equals') {
+                    || t.type === 'attribute_exists' || t.type === 'computed_style_equals'
+                    || t.type === 'computed_styles_equals') {
                     if (!t.selector || typeof t.selector !== 'string') {
                         errors.push('Test ' + (t.id || i) + ' requires selector.');
                     }
@@ -120,6 +122,11 @@
                     || t.type === 'computed_style_equals') {
                     if (typeof t.expected === 'undefined') {
                         errors.push('Test ' + (t.id || i) + ' requires expected.');
+                    }
+                }
+                if (t.type === 'computed_styles_equals') {
+                    if (!t.expected || typeof t.expected !== 'object' || Array.isArray(t.expected)) {
+                        errors.push('Test ' + (t.id || i) + ' requires expected object of CSS properties.');
                     }
                 }
                 if (t.type === 'attribute_equals' || t.type === 'attribute_exists') {

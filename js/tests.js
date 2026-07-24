@@ -133,10 +133,64 @@
             if (isColorProperty(prop)) {
                 actual = normalizeCssColor(doc, actual);
                 expected = normalizeCssColor(doc, expected);
+            } else if (isOffsetProperty(prop)) {
+                actual = normalizeCssOffset(actual);
+                expected = normalizeCssOffset(expected);
             }
             return {
                 pass: actual === expected,
                 detail: 'Got "' + actual + '", expected "' + expected + '"'
+            };
+        },
+        /**
+         * Compare several computed properties on one element.
+         * test.expected is an object: { "position": "fixed", "top": "0", ... }
+         */
+        computed_styles_equals: function (doc, test) {
+            var el = first(doc, test.selector);
+            if (!el) {
+                return { pass: false, detail: 'No match for ' + test.selector };
+            }
+            if (!test.expected || typeof test.expected !== 'object' || Array.isArray(test.expected)) {
+                var err = new Error('computed_styles_equals requires expected object');
+                err.code = 'config';
+                throw err;
+            }
+            var win = doc.defaultView;
+            if (!win || !win.getComputedStyle) {
+                return { pass: false, detail: 'Cannot read computed style (no window)' };
+            }
+            var cs = win.getComputedStyle(el);
+            var props = Object.keys(test.expected);
+            if (!props.length) {
+                var err2 = new Error('computed_styles_equals expected object is empty');
+                err2.code = 'config';
+                throw err2;
+            }
+            var mismatches = [];
+            props.forEach(function (prop) {
+                var actual = cs.getPropertyValue(prop).trim();
+                var expected = String(test.expected[prop]).trim();
+                if (isColorProperty(prop)) {
+                    actual = normalizeCssColor(doc, actual);
+                    expected = normalizeCssColor(doc, expected);
+                } else if (isOffsetProperty(prop)) {
+                    actual = normalizeCssOffset(actual);
+                    expected = normalizeCssOffset(expected);
+                }
+                if (actual !== expected) {
+                    mismatches.push(prop + ': got "' + actual + '", expected "' + expected + '"');
+                }
+            });
+            if (!mismatches.length) {
+                return {
+                    pass: true,
+                    detail: 'Matched ' + props.join(', ')
+                };
+            }
+            return {
+                pass: false,
+                detail: mismatches.join('; ')
             };
         }
     };
@@ -147,6 +201,18 @@
             || p.indexOf('color') !== -1
             || p === 'fill'
             || p === 'stroke';
+    }
+
+    function isOffsetProperty(prop) {
+        var p = String(prop || '').toLowerCase();
+        return p === 'top' || p === 'right' || p === 'bottom' || p === 'left';
+    }
+
+    /** Treat bare 0 the same as 0px for corner offsets. */
+    function normalizeCssOffset(value) {
+        var v = String(value || '').trim().toLowerCase();
+        if (v === '0') return '0px';
+        return v;
     }
 
     /**

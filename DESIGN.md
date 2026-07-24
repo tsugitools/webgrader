@@ -590,6 +590,7 @@ Phase 1 should implement only a small set of high-value declarative tests.
 ### CSS
 
 - `computed_style_equals`
+- `computed_styles_equals` (several properties on one element)
 - `css_validate` (see above)
 - `element_visible`
 - `element_hidden`

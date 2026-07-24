@@ -15,6 +15,7 @@ $assignments = array(
     'SimpleList' => 'HTML: A Simple List',
     'ValidatedHtmlPage' => 'HTML: Validated HTML Page',
     'ColoringParagraphs' => 'CSS: Coloring Paragraphs',
+    'FourCorners' => 'CSS: Four Corners',
 );
 
 /**
@@ -27,6 +28,7 @@ function webgrader_builtin_relpath($key) {
         'SimpleList' => 'assignments/html/simple-list',
         'ValidatedHtmlPage' => 'assignments/html/validated-html-page',
         'ColoringParagraphs' => 'assignments/css/coloring-paragraphs',
+        'FourCorners' => 'assignments/css/four-corners',
     );
     return isset($map[$key]) ? $map[$key] : null;
 }

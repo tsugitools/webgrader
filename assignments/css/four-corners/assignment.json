@@ -1,0 +1,108 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "css-four-corners-001",
+  "assignment_version": 3,
+  "title": "Four Corners",
+  "prompt": "<p>The HTML has four paragraphs with ids <code>upleft</code>, <code>upright</code>, <code>downleft</code>, and <code>downright</code>. Pin each one to the matching corner of the preview and give each a colored border. Use <code>position: fixed</code> so they stick to the preview viewport.</p><ul><li><code>#upleft</code> — pin to the upper left with <code>top: 0</code> and <code>left: 0</code>, and a <strong>2px solid red</strong> border</li><li><code>#upright</code> — pin to the upper right with a <strong>2px solid green</strong> border</li><li><code>#downleft</code> — pin to the lower left with a <strong>2px solid orange</strong> border</li><li><code>#downright</code> — pin to the lower right with a <strong>2px solid blue</strong> border</li></ul><p>After you Run, you should see one bordered label in each corner of the preview.</p>",
+  "files": {
+    "html": {
+      "mode": "readonly",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Four Corners</title>\n</head>\n<body>\n  <p id=\"upleft\">up left</p>\n  <p id=\"upright\">up right</p>\n  <p id=\"downleft\">down left</p>\n  <p id=\"downright\">down right</p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "editable",
+      "starter": "/* Pin each paragraph to a corner and add a colored border */\n\n"
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "css-valid",
+      "name": "CSS validates",
+      "type": "css_validate",
+      "mode": "recommended",
+      "points": 2,
+      "feedback": "Fix the CSS validation errors shown in the test details."
+    },
+    {
+      "id": "upleft-corner",
+      "name": "#upleft top-left with red border",
+      "type": "computed_styles_equals",
+      "selector": "#upleft",
+      "expected": {
+        "position": "fixed",
+        "top": "0",
+        "left": "0",
+        "border-top-width": "2px",
+        "border-top-style": "solid",
+        "border-top-color": "red"
+      },
+      "points": 2,
+      "feedback": "Set #upleft to position: fixed; top: 0; left: 0; border: 2px solid red;"
+    },
+    {
+      "id": "upright-corner",
+      "name": "#upright top-right with green border",
+      "type": "computed_styles_equals",
+      "selector": "#upright",
+      "expected": {
+        "position": "fixed",
+        "top": "0",
+        "right": "0",
+        "border-top-width": "2px",
+        "border-top-style": "solid",
+        "border-top-color": "green"
+      },
+      "points": 2,
+      "feedback": "Pin #upright to the upper-right corner with position: fixed and a 2px solid green border."
+    },
+    {
+      "id": "downleft-corner",
+      "name": "#downleft bottom-left with orange border",
+      "type": "computed_styles_equals",
+      "selector": "#downleft",
+      "expected": {
+        "position": "fixed",
+        "bottom": "0",
+        "left": "0",
+        "border-top-width": "2px",
+        "border-top-style": "solid",
+        "border-top-color": "orange"
+      },
+      "points": 2,
+      "feedback": "Pin #downleft to the lower-left corner with position: fixed and a 2px solid orange border."
+    },
+    {
+      "id": "downright-corner",
+      "name": "#downright bottom-right with blue border",
+      "type": "computed_styles_equals",
+      "selector": "#downright",
+      "expected": {
+        "position": "fixed",
+        "bottom": "0",
+        "right": "0",
+        "border-top-width": "2px",
+        "border-top-style": "solid",
+        "border-top-color": "blue"
+      },
+      "points": 2,
+      "feedback": "Pin #downright to the lower-right corner with position: fixed and a 2px solid blue border."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "css": "/* Pin each paragraph to a corner and add a colored border */\n\n#upleft {\n  position: fixed;\n  top: 0;\n  left: 0;\n  margin: 0;\n  border: 2px solid red;\n}\n\n#upright {\n  position: fixed;\n  top: 0;\n  right: 0;\n  margin: 0;\n  border: 2px solid green;\n}\n\n#downleft {\n  position: fixed;\n  bottom: 0;\n  left: 0;\n  margin: 0;\n  border: 2px solid orange;\n}\n\n#downright {\n  position: fixed;\n  bottom: 0;\n  right: 0;\n  margin: 0;\n  border: 2px solid blue;\n}\n"
+  }
+}
