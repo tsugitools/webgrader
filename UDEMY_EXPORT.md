@@ -2,6 +2,10 @@
 
 ## Status
 
+Phase 0 (observations) and Phase 1 (minimal HTML export CLI) implemented.
+
+Phase 1 success criterion met (2026-07-24): exported `simple-list` was entered manually into a Udemy Web Development coding exercise and graded successfully. See `docs/udemy-observations.md`.
+
 Proposed design for exporting compatible WebGrader assignments into files used to author Udemy Web Development coding exercises.
 
 WebGrader remains the authoritative assignment format and runtime. Udemy export produces a derived, reviewable package. The first implementation should be small and conservative.

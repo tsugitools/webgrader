@@ -1,0 +1,23 @@
+{
+    "format": "webgrader-udemy-export",
+    "version": 1,
+    "udemy_export_version": 1,
+    "last_verified": "2026-07-24",
+    "source_assignment": "html-simple-list-001",
+    "compatibility": "compatible_with_warnings",
+    "generated_files": [
+        "starter.html",
+        "solution.html",
+        "evaluation.js",
+        "instructions.md",
+        "manifest.json",
+        "COMPATIBILITY.md"
+    ],
+    "warnings": [
+        {
+            "code": "UNEQUAL_POINTS",
+            "message": "Unequal WebGrader point weights may not be preserved in Udemy."
+        }
+    ],
+    "errors": []
+}

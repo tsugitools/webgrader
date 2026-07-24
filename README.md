@@ -16,6 +16,8 @@ Phase 0–1 implemented:
 
 Later phases (mock `fetch`, rich authoring) are described in [DESIGN.md](DESIGN.md).
 
+Udemy export (Phase 1 CLI) is described in [UDEMY_EXPORT.md](UDEMY_EXPORT.md). Simple HTML export was verified in a live Udemy exercise on 2026-07-24 (`simple-list`); see [docs/udemy-observations.md](docs/udemy-observations.md).
+
 ## Tool layout
 
 ```text
@@ -125,6 +127,24 @@ The grader always runs `html_validate` then `css_validate` before other tests (r
 | Editor | Plain textareas (CodeMirror later) |
 | Autosave | `student-save.php` + localStorage backup |
 | Catalog | Directory + `assignment.json` under `assignments/` |
+
+## Udemy export (Phase 1)
+
+Export a compatible WebGrader assignment to a reviewable ZIP for manual paste into a Udemy Web Development coding exercise:
+
+```bash
+php scripts/export-udemy.php \
+  assignments/html/simple-list/assignment.json \
+  --output simple-list-udemy.zip
+```
+
+The ZIP contains `starter.html`, `solution.html`, `evaluation.js` (Jasmine), instructions, `manifest.json`, and `COMPATIBILITY.md`. Unsupported features (for example `html_validate`, assets, mock fetch) fail the export instead of being silently skipped.
+
+Regression tests:
+
+```bash
+php tests/udemy-export/run.php
+```
 
 ## Security limitations
 
