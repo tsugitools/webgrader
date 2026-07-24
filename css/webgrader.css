@@ -373,7 +373,7 @@ textarea.code {
 }
 
 .console-empty {
-    color: #808080;
+    color: #b0b0b0;
 }
 
 .console-line {
@@ -395,20 +395,27 @@ textarea.code {
 
 .console-msg {
     margin: 0;
+    padding: 0;
+    border: 0;
     white-space: pre-wrap;
     word-break: break-word;
     font: inherit;
-    color: inherit;
+    /* Beat host/Bootstrap <pre> styles — light chip + light text fails contrast. */
+    background: transparent;
+    color: #f3f3f3;
 }
 
 .console-log .console-level,
 .console-info .console-level,
 .console-debug .console-level { color: #9cdcfe; }
-.console-warn .console-level { color: #dcdcaa; }
+.console-warn .console-level { color: #f0e68c; }
 .console-error .console-level,
 .console-exception .console-level,
-.console-rejection .console-level { color: #f48771; }
-.console-warn .console-msg { color: #dcdcaa; }
+.console-rejection .console-level { color: #ff8a7a; }
+.console-log .console-msg,
+.console-info .console-msg,
+.console-debug .console-msg { color: #f3f3f3; }
+.console-warn .console-msg { color: #f0e68c; }
 .console-error .console-msg,
 .console-exception .console-msg,
-.console-rejection .console-msg { color: #f48771; }
+.console-rejection .console-msg { color: #ff8a7a; }

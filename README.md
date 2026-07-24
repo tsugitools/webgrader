@@ -29,6 +29,7 @@ webgrader/
   css/webgrader.css
   assignments/html/…/assignment.json
   assignments/css/…/assignment.json
+  assignments/javascript/…/assignment.json
 ```
 
 ## Instructor setup
@@ -45,7 +46,7 @@ LTI custom parameter (optional):
 { "key": "exercise", "value": "HeadingsAndParagraphs" }
 ```
 
-Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`.
+Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`, `HelloWorld`.
 
 ## Learner workflow
 

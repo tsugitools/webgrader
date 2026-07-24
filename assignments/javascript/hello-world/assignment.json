@@ -1,0 +1,45 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "js-hello-world-001",
+  "assignment_version": 1,
+  "title": "Hello World",
+  "prompt": "<p>Your first JavaScript program: print a message to the console.</p><ul><li>In the JavaScript editor, call <code>console.log</code> with the text <strong>Hello world</strong> (capital H, lowercase w).</li><li>Press <strong>Run / Restart</strong> and check the Console panel — you should see the message there.</li><li>Then press <strong>Grade</strong>.</li></ul><p>Example:</p><pre><code>console.log(\"Hello world\");</code></pre>",
+  "files": {
+    "html": {
+      "mode": "hidden",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Hello World</title>\n</head>\n<body>\n  <p>Look at the Console panel after you Run.</p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "hidden",
+      "starter": ""
+    },
+    "javascript": {
+      "mode": "editable",
+      "starter": "// Print Hello world to the console\n\n"
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "hello-log",
+      "name": "console.log Hello world",
+      "type": "console_includes",
+      "level": "log",
+      "expected": "Hello world",
+      "points": 10,
+      "feedback": "Add console.log(\"Hello world\"); then Run before grading."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "javascript": "// Print Hello world to the console\n\nconsole.log(\"Hello world\");\n"
+  }
+}

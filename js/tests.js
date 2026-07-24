@@ -192,8 +192,81 @@
                 pass: false,
                 detail: mismatches.join('; ')
             };
+        },
+        /**
+         * Pass if any captured console entry matches expected text.
+         * String args are stored JSON-quoted; we compare against the logical text.
+         * Optional test.level (e.g. "log") filters by level; omit to accept any.
+         * Optional test.match: "equals" (default) or "contains".
+         */
+        console_includes: function (doc, test) {
+            var Console = global.WebGraderConsole;
+            if (!Console || typeof Console.getEntries !== 'function') {
+                return {
+                    pass: false,
+                    detail: 'Console capture is not available.'
+                };
+            }
+            if (typeof test.expected === 'undefined') {
+                var err = new Error('console_includes requires expected');
+                err.code = 'config';
+                throw err;
+            }
+            var expected = String(test.expected);
+            var matchMode = test.match === 'contains' ? 'contains' : 'equals';
+            var levelFilter = test.level ? String(test.level) : null;
+            var entries = Console.getEntries() || [];
+            if (!entries.length) {
+                return {
+                    pass: false,
+                    detail: 'No console output yet. Press Run / Restart first.'
+                };
+            }
+
+            var matched = entries.some(function (entry) {
+                if (!entry) return false;
+                if (levelFilter && entry.level !== levelFilter) return false;
+                var text = consoleEntryText(entry.message);
+                if (matchMode === 'contains') {
+                    return text.indexOf(expected) !== -1
+                        || String(entry.message || '').indexOf(expected) !== -1;
+                }
+                return text === expected
+                    || String(entry.message || '') === expected
+                    || String(entry.message || '') === JSON.stringify(expected);
+            });
+
+            if (matched) {
+                return {
+                    pass: true,
+                    detail: matchMode === 'contains'
+                        ? 'Console contains "' + expected + '"'
+                        : 'Found console output "' + expected + '"'
+                };
+            }
+
+            var sample = entries.slice(0, 5).map(function (e) {
+                return (e.level || '?') + ': ' + consoleEntryText(e.message);
+            }).join(' | ');
+            return {
+                pass: false,
+                detail: 'Expected console '
+                    + (levelFilter ? (levelFilter + ' ') : '')
+                    + (matchMode === 'contains' ? 'to contain' : 'message')
+                    + ' "' + expected + '". Saw: ' + (sample || '(empty)')
+            };
         }
     };
+
+    /** Undo JSON.stringify quoting used when capturing string console args. */
+    function consoleEntryText(message) {
+        var raw = String(message == null ? '' : message);
+        try {
+            var parsed = JSON.parse(raw);
+            if (typeof parsed === 'string') return parsed;
+        } catch (e) { /* not a JSON string literal */ }
+        return raw;
+    }
 
     function isColorProperty(prop) {
         var p = String(prop || '').toLowerCase();

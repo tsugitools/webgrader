@@ -19,6 +19,7 @@ $assignments = array(
     'PuttingTheCascade' => 'CSS: Putting the Cascade in CSS',
     'HighlightingWithSpan' => 'CSS: Highlighting with Span',
     'LinkStates' => 'CSS: Link States',
+    'HelloWorld' => 'JavaScript: Hello World',
 );
 
 /**
@@ -35,6 +36,7 @@ function webgrader_builtin_relpath($key) {
         'PuttingTheCascade' => 'assignments/css/putting-the-cascade',
         'HighlightingWithSpan' => 'assignments/html/highlighting-with-span',
         'LinkStates' => 'assignments/css/link-states',
+        'HelloWorld' => 'assignments/javascript/hello-world',
     );
     return isset($map[$key]) ? $map[$key] : null;
 }

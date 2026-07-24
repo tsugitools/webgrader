@@ -18,7 +18,8 @@
         css_validate: true,
         css_rule_declares: true,
         computed_style_equals: true,
-        computed_styles_equals: true
+        computed_styles_equals: true,
+        console_includes: true
     };
 
     function isObject(v) {
@@ -131,7 +132,7 @@
                 }
                 if (t.type === 'selector_count' || t.type === 'text_equals'
                     || t.type === 'text_contains' || t.type === 'attribute_equals'
-                    || t.type === 'computed_style_equals') {
+                    || t.type === 'computed_style_equals' || t.type === 'console_includes') {
                     if (typeof t.expected === 'undefined') {
                         errors.push('Test ' + (t.id || i) + ' requires expected.');
                     }
