@@ -1,17 +1,42 @@
 <?php
 /**
- * Local DOM validation of generated starter/solution against declarative tests.
+ * Local validation of generated starter/solution against converted tests.
  *
- * Phase 1 validates the same semantics as the Jasmine emitters without requiring
- * a browser. This is the exporter's "test your output" check.
+ * Phase 1: DOM checks via PHP DOMDocument.
+ * Phase 2: call_function via Node VM; computed styles via optional jsdom.
  */
 class UdemyLocalValidator
 {
+    /** Types evaluated in PHP without a browser. */
+    public static $domTypes = array(
+        'selector_exists',
+        'selector_not_exists',
+        'selector_count',
+        'text_equals',
+        'text_contains',
+        'attribute_equals',
+        'class_present',
+    );
+
+    /** Types evaluated with Node (no DOM layout engine required). */
+    public static $nodeVmTypes = array(
+        'function_exists',
+        'function_result',
+        'call_function',
+    );
+
+    /** Types that need a CSSOM / layout engine (jsdom or similar). */
+    public static $browserTypes = array(
+        'computed_style_equals',
+        'computed_styles_equals',
+        'click_changes_dom',
+    );
+
     /**
-     * @param string $html
-     * @param array $convertedTests From UdemyTestEmitter (id/type/name + original fields needed)
-     * @param array $originalTests Full original test objects keyed/ordered
-     * @return array{passed:array,failed:array,errors:array}
+     * @param string $html Assembled HTML document
+     * @param array $convertedTests
+     * @param array $originalTests
+     * @return array{passed:array,failed:array,skipped:array,errors:array,warnings:array}
      */
     public static function run($html, array $convertedTests, array $originalTests)
     {
@@ -22,21 +47,15 @@ class UdemyLocalValidator
             }
         }
 
-        $doc = self::loadHtml($html);
-        if ($doc === null) {
-            return array(
-                'passed' => array(),
-                'failed' => array(),
-                'errors' => array(array(
-                    'code' => 'HTML_PARSE_FAILED',
-                    'message' => 'Generated HTML could not be parsed for local validation.',
-                )),
-            );
-        }
-
         $passed = array();
         $failed = array();
+        $skipped = array();
         $errors = array();
+        $warnings = array();
+
+        $domTests = array();
+        $nodeTests = array();
+        $browserTests = array();
 
         foreach ($convertedTests as $meta) {
             $id = $meta['id'];
@@ -48,28 +67,113 @@ class UdemyLocalValidator
                 continue;
             }
             $test = $byId[$id];
+            $type = isset($test['type']) ? (string) $test['type'] : '';
+            if (in_array($type, self::$domTypes, true)) {
+                $domTests[] = $test;
+            } elseif (in_array($type, self::$nodeVmTypes, true)) {
+                $nodeTests[] = $test;
+            } elseif (in_array($type, self::$browserTypes, true)) {
+                $browserTests[] = $test;
+            } else {
+                $skipped[] = array(
+                    'id' => $id,
+                    'detail' => 'No local validator for type ' . $type,
+                );
+            }
+        }
+
+        if (count($domTests) > 0) {
+            $doc = self::loadHtml($html);
+            if ($doc === null) {
+                $errors[] = array(
+                    'code' => 'HTML_PARSE_FAILED',
+                    'message' => 'Generated HTML could not be parsed for local validation.',
+                );
+            } else {
+                foreach ($domTests as $test) {
+                    try {
+                        $result = self::evaluateDom($doc, $test);
+                        if ($result['pass']) {
+                            $passed[] = $test['id'];
+                        } else {
+                            $failed[] = array(
+                                'id' => $test['id'],
+                                'detail' => $result['detail'],
+                            );
+                        }
+                    } catch (Exception $e) {
+                        $errors[] = array(
+                            'code' => 'VALIDATION_EXCEPTION',
+                            'message' => 'Test "' . $test['id'] . '": ' . $e->getMessage(),
+                        );
+                    }
+                }
+            }
+        }
+
+        foreach ($nodeTests as $test) {
             try {
-                $result = self::evaluate($doc, $test);
+                $result = self::evaluateNodeVm($html, $test);
+                if (!empty($result['skipped'])) {
+                    $skipped[] = array(
+                        'id' => $test['id'],
+                        'detail' => $result['detail'],
+                    );
+                    $warnings[] = array(
+                        'code' => 'LOCAL_NODE_VALIDATION_SKIPPED',
+                        'message' => 'Could not locally run JS test "' . $test['id']
+                            . '": ' . $result['detail'],
+                    );
+                    continue;
+                }
                 if ($result['pass']) {
-                    $passed[] = $id;
+                    $passed[] = $test['id'];
                 } else {
                     $failed[] = array(
-                        'id' => $id,
+                        'id' => $test['id'],
                         'detail' => $result['detail'],
                     );
                 }
             } catch (Exception $e) {
                 $errors[] = array(
                     'code' => 'VALIDATION_EXCEPTION',
-                    'message' => 'Test "' . $id . '": ' . $e->getMessage(),
+                    'message' => 'Test "' . $test['id'] . '": ' . $e->getMessage(),
                 );
+            }
+        }
+
+        if (count($browserTests) > 0) {
+            $browserResult = self::evaluateBrowserBatch($html, $browserTests);
+            if (!empty($browserResult['unavailable'])) {
+                foreach ($browserTests as $test) {
+                    $skipped[] = array(
+                        'id' => $test['id'],
+                        'detail' => $browserResult['detail'],
+                    );
+                }
+                $warnings[] = array(
+                    'code' => 'LOCAL_COMPUTED_STYLE_UNVERIFIED',
+                    'message' => 'Computed-style / event tests were not verified locally'
+                        . ' (' . $browserResult['detail'] . ').'
+                        . ' Confirm them inside Udemy.',
+                );
+            } else {
+                $errors = array_merge($errors, $browserResult['errors']);
+                foreach ($browserResult['passed'] as $id) {
+                    $passed[] = $id;
+                }
+                foreach ($browserResult['failed'] as $fail) {
+                    $failed[] = $fail;
+                }
             }
         }
 
         return array(
             'passed' => $passed,
             'failed' => $failed,
+            'skipped' => $skipped,
             'errors' => $errors,
+            'warnings' => $warnings,
         );
     }
 
@@ -89,7 +193,7 @@ class UdemyLocalValidator
         return $ok ? $doc : null;
     }
 
-    private static function evaluate(DOMDocument $doc, array $test)
+    private static function evaluateDom(DOMDocument $doc, array $test)
     {
         $type = $test['type'];
         $selector = isset($test['selector']) ? (string) $test['selector'] : '';
@@ -171,9 +275,288 @@ class UdemyLocalValidator
                     'pass' => $actual === $expected,
                     'detail' => 'Got "' . $actual . '", expected "' . $expected . '"',
                 );
+
+            case 'class_present':
+                if ($nodes->length === 0) {
+                    return array('pass' => false, 'detail' => 'No match for ' . $selector);
+                }
+                $el = $nodes->item(0);
+                if (!($el instanceof DOMElement)) {
+                    return array('pass' => false, 'detail' => 'Match is not an element');
+                }
+                $className = isset($test['class'])
+                    ? (string) $test['class']
+                    : (string) $test['expected'];
+                $classAttr = ' ' . trim($el->getAttribute('class')) . ' ';
+                $ok = strpos($classAttr, ' ' . $className . ' ') !== false;
+                return array(
+                    'pass' => $ok,
+                    'detail' => $ok
+                        ? 'Has class ' . $className
+                        : 'Missing class ' . $className,
+                );
         }
 
-        throw new Exception('Unhandled type in local validator: ' . $type);
+        throw new Exception('Unhandled DOM type in local validator: ' . $type);
+    }
+
+    private static function evaluateNodeVm($html, array $test)
+    {
+        if (!self::nodeAvailable()) {
+            return array(
+                'pass' => false,
+                'skipped' => true,
+                'detail' => 'node binary not available',
+            );
+        }
+
+        $script = self::extractScripts($html);
+        $payload = array(
+            'script' => $script,
+            'test' => $test,
+        );
+        if ($test['type'] === 'call_function') {
+            $fn = !empty($test['function']) ? (string) $test['function'] : '';
+            $op = isset($test['expect_op']) ? (string) $test['expect_op'] : '';
+            $arity = isset($test['arg_count']) ? (int) $test['arg_count'] : 1;
+            $trials = isset($test['trials']) ? (int) $test['trials'] : 3;
+            $payload['cases'] = UdemyTestEmitter::deterministicCallCases($op, $arity, $trials);
+            $payload['function'] = $fn;
+        }
+
+        $json = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        $cmd = 'node -e ' . escapeshellarg(self::nodeVmRunnerSource()) . ' '
+            . escapeshellarg($json);
+        $out = self::shellExec($cmd);
+        if ($out === null) {
+            return array(
+                'pass' => false,
+                'skipped' => true,
+                'detail' => 'node execution failed',
+            );
+        }
+
+        $decoded = json_decode($out, true);
+        if (!is_array($decoded) || !isset($decoded['pass'])) {
+            return array(
+                'pass' => false,
+                'skipped' => true,
+                'detail' => 'invalid node validator response: ' . substr($out, 0, 200),
+            );
+        }
+        return array(
+            'pass' => !empty($decoded['pass']),
+            'detail' => isset($decoded['detail']) ? (string) $decoded['detail'] : '',
+        );
+    }
+
+    private static function evaluateBrowserBatch($html, array $tests)
+    {
+        $scriptPath = dirname(__FILE__) . '/local-browser-check.mjs';
+        if (!is_readable($scriptPath)) {
+            return array(
+                'unavailable' => true,
+                'detail' => 'local-browser-check.mjs missing',
+                'passed' => array(),
+                'failed' => array(),
+                'errors' => array(),
+            );
+        }
+        if (!self::nodeAvailable()) {
+            return array(
+                'unavailable' => true,
+                'detail' => 'node binary not available',
+                'passed' => array(),
+                'failed' => array(),
+                'errors' => array(),
+            );
+        }
+
+        $payload = json_encode(array(
+            'html' => $html,
+            'tests' => $tests,
+        ), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'wgudemyhtml');
+        if ($tmp === false) {
+            return array(
+                'unavailable' => true,
+                'detail' => 'could not create temp file',
+                'passed' => array(),
+                'failed' => array(),
+                'errors' => array(),
+            );
+        }
+        $jsonPath = $tmp . '.json';
+        @unlink($tmp);
+        file_put_contents($jsonPath, $payload);
+
+        $cmd = 'node ' . escapeshellarg($scriptPath) . ' ' . escapeshellarg($jsonPath);
+        $out = self::shellExec($cmd);
+        @unlink($jsonPath);
+
+        if ($out === null) {
+            return array(
+                'unavailable' => true,
+                'detail' => 'browser check failed to run',
+                'passed' => array(),
+                'failed' => array(),
+                'errors' => array(),
+            );
+        }
+
+        $decoded = json_decode($out, true);
+        if (!is_array($decoded)) {
+            return array(
+                'unavailable' => true,
+                'detail' => 'invalid browser check response',
+                'passed' => array(),
+                'failed' => array(),
+                'errors' => array(),
+            );
+        }
+        if (!empty($decoded['unavailable'])) {
+            return array(
+                'unavailable' => true,
+                'detail' => isset($decoded['detail']) ? (string) $decoded['detail'] : 'jsdom unavailable',
+                'passed' => array(),
+                'failed' => array(),
+                'errors' => array(),
+            );
+        }
+
+        return array(
+            'unavailable' => false,
+            'detail' => '',
+            'passed' => isset($decoded['passed']) ? $decoded['passed'] : array(),
+            'failed' => isset($decoded['failed']) ? $decoded['failed'] : array(),
+            'errors' => isset($decoded['errors']) ? $decoded['errors'] : array(),
+        );
+    }
+
+    private static function nodeVmRunnerSource()
+    {
+        return <<<'JS'
+const vm = require('vm');
+const payload = JSON.parse(process.argv[1]);
+const script = String(payload.script || '');
+const test = payload.test || {};
+const sandbox = {};
+vm.createContext(sandbox);
+try {
+  vm.runInContext(script, sandbox, { timeout: 2000 });
+} catch (e) {
+  process.stdout.write(JSON.stringify({
+    pass: false,
+    detail: 'Script evaluation failed: ' + (e && e.message ? e.message : String(e))
+  }));
+  process.exit(0);
+}
+
+function functionName(t) {
+  return t.function || t.fn || '';
+}
+
+try {
+  const type = test.type;
+  if (type === 'function_exists') {
+    const name = functionName(test);
+    const ok = typeof sandbox[name] === 'function';
+    process.stdout.write(JSON.stringify({
+      pass: ok,
+      detail: ok ? name + ' exists' : name + ' is not a function'
+    }));
+    process.exit(0);
+  }
+  if (type === 'function_result') {
+    const name = functionName(test);
+    if (typeof sandbox[name] !== 'function') {
+      process.stdout.write(JSON.stringify({ pass: false, detail: name + ' is not a function' }));
+      process.exit(0);
+    }
+    const args = Array.isArray(test.args) ? test.args : [];
+    const actual = sandbox[name].apply(sandbox, args);
+    const ok = actual === test.expected;
+    process.stdout.write(JSON.stringify({
+      pass: ok,
+      detail: ok ? 'Matched' : ('Got ' + JSON.stringify(actual) + ', expected ' + JSON.stringify(test.expected))
+    }));
+    process.exit(0);
+  }
+  if (type === 'call_function') {
+    const name = payload.function || functionName(test);
+    if (typeof sandbox[name] !== 'function') {
+      process.stdout.write(JSON.stringify({ pass: false, detail: name + ' is not a function' }));
+      process.exit(0);
+    }
+    const cases = Array.isArray(payload.cases) ? payload.cases : [];
+    for (const c of cases) {
+      const actual = sandbox[name].apply(sandbox, c.args);
+      if (actual !== c.expected) {
+        process.stdout.write(JSON.stringify({
+          pass: false,
+          detail: name + '(' + c.args.join(', ') + ') returned ' + JSON.stringify(actual)
+            + ', expected ' + JSON.stringify(c.expected)
+        }));
+        process.exit(0);
+      }
+    }
+    process.stdout.write(JSON.stringify({ pass: true, detail: 'Passed ' + cases.length + ' trial(s)' }));
+    process.exit(0);
+  }
+  process.stdout.write(JSON.stringify({ pass: false, detail: 'Unhandled node test type' }));
+} catch (e) {
+  process.stdout.write(JSON.stringify({
+    pass: false,
+    detail: e && e.message ? e.message : String(e)
+  }));
+}
+JS;
+    }
+
+    private static function extractScripts($html)
+    {
+        $out = '';
+        if (preg_match_all('/<script\b[^>]*>(.*?)<\/script>/is', (string) $html, $m)) {
+            foreach ($m[1] as $body) {
+                $out .= $body . "\n";
+            }
+        }
+        return $out;
+    }
+
+    private static function nodeAvailable()
+    {
+        static $available = null;
+        if ($available !== null) {
+            return $available;
+        }
+        $out = self::shellExec('node -v');
+        $available = is_string($out) && strpos($out, 'v') === 0;
+        return $available;
+    }
+
+    private static function shellExec($cmd)
+    {
+        $descriptors = array(
+            0 => array('pipe', 'r'),
+            1 => array('pipe', 'w'),
+            2 => array('pipe', 'w'),
+        );
+        $proc = proc_open($cmd, $descriptors, $pipes, null, null);
+        if (!is_resource($proc)) {
+            return null;
+        }
+        fclose($pipes[0]);
+        $stdout = stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        stream_get_contents($pipes[2]);
+        fclose($pipes[2]);
+        $code = proc_close($proc);
+        if ($code !== 0 && $stdout === '') {
+            return null;
+        }
+        return is_string($stdout) ? trim($stdout) : null;
     }
 
     private static function textOf(DOMNode $node)
@@ -187,9 +570,7 @@ class UdemyLocalValidator
     }
 
     /**
-     * Minimal CSS selector → XPath for Phase 1 selectors used in catalog assignments.
-     * Supports: tag, #id, .class, [attr="value"], descendant/child combinators,
-     * and :first-child / :last-child.
+     * Minimal CSS selector → XPath for catalog selectors.
      *
      * @return string|null
      */
@@ -270,10 +651,6 @@ class UdemyLocalValidator
         }
 
         if ($pseudo === 'first-child') {
-            $predicates[] = 'position()=1';
-            // CSS :first-child means first among element siblings. Approximate with
-            // count(preceding-sibling::*)=0 which is closer.
-            array_pop($predicates);
             $predicates[] = 'count(preceding-sibling::*)=0';
         } elseif ($pseudo === 'last-child') {
             $predicates[] = 'count(following-sibling::*)=0';

@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 /**
- * Lightweight regression tests for the Phase 1 Udemy exporter.
+ * Lightweight regression tests for the Udemy exporter (Phase 1–2).
  *
  * Run: php tests/udemy-export/run.php
  */
@@ -68,8 +68,39 @@ $emit = UdemyTestEmitter::emit(array(
     ),
 ));
 assert_eq(count($emit['converted']), 1, 'converts supported test');
-assert_eq(count($emit['errors']), 1, 'errors on unsupported type');
+assert_eq(count($emit['errors']), 0, 'validators soft-skip without hard error');
+assert_eq(count($emit['warnings']), 1, 'validators emit warning');
 assert_true(strpos($emit['js'], 'querySelector("h1")') !== false, 'emits selector_exists Jasmine');
+assert_true(strpos($emit['js'], 'describe("HTML structure"') !== false, 'groups HTML suite');
+
+$cssEmit = UdemyTestEmitter::emit(array(
+    array(
+        'id' => 'bg',
+        'name' => 'Yellow',
+        'type' => 'computed_style_equals',
+        'selector' => '#title',
+        'property' => 'background-color',
+        'expected' => 'yellow',
+        'points' => 1,
+    ),
+));
+assert_true(strpos($cssEmit['js'], 'describe("CSS presentation"') !== false, 'groups CSS suite');
+assert_true(strpos($cssEmit['js'], 'wgNormalizeComputed') !== false, 'includes style helpers');
+
+$jsEmit = UdemyTestEmitter::emit(array(
+    array(
+        'id' => 'add',
+        'name' => 'add_two',
+        'type' => 'call_function',
+        'function' => 'add_two',
+        'arg_count' => 2,
+        'trials' => 2,
+        'expect_op' => 'sum',
+        'points' => 1,
+    ),
+));
+assert_true(strpos($jsEmit['js'], 'describe("JavaScript behavior"') !== false, 'groups JS suite');
+assert_true(strpos($jsEmit['js'], 'window["add_two"](2, 3)') !== false, 'emits deterministic call');
 
 $raw = UdemyTestEmitter::emit(array(
     array(
@@ -118,15 +149,44 @@ foreach (array('evaluation.js', 'instructions.md', 'COMPATIBILITY.md') as $name)
     assert_eq($package->members[$name], $golden, 'golden match ' . $name);
 }
 
-echo "UdemyExporter headings (html_validate unsupported)\n";
+echo "UdemyExporter headings (html_validate soft-skip)\n";
 $headings = UdemyExporter::loadAssignmentFile(
     'assignments/html/headings-and-paragraphs/assignment.json',
     $repoRoot
 );
 $hpkg = UdemyExporter::build($headings, array('repo_root' => $repoRoot));
-assert_true(!$hpkg->ok, 'headings export not ok');
-assert_eq($hpkg->compatibility, 'unsupported', 'headings unsupported');
-assert_true($hpkg->zip_bytes === null, 'no ZIP for unsupported');
+assert_true($hpkg->ok, 'headings export ok with soft-skipped validator');
+assert_eq($hpkg->compatibility, 'compatible_with_warnings', 'headings compatible with warnings');
+
+echo "UdemyExporter coloring-paragraphs\n";
+$coloring = UdemyExporter::loadAssignmentFile(
+    'assignments/css/coloring-paragraphs/assignment.json',
+    $repoRoot
+);
+$cpkg = UdemyExporter::build($coloring, array('repo_root' => $repoRoot));
+assert_true($cpkg->ok, 'coloring-paragraphs export ok');
+assert_true(strpos($cpkg->members['evaluation.js'], 'CSS presentation') !== false, 'coloring has CSS suite');
+assert_true(strpos($cpkg->members['solution.html'], 'background-color: yellow') !== false,
+    'coloring solution embeds CSS');
+
+echo "UdemyExporter add-two-and-square\n";
+$addTwo = UdemyExporter::loadAssignmentFile(
+    'assignments/javascript/add-two-and-square/assignment.json',
+    $repoRoot
+);
+$apkg = UdemyExporter::build($addTwo, array('repo_root' => $repoRoot));
+assert_true($apkg->ok, 'add-two-and-square export ok');
+assert_true(strpos($apkg->members['evaluation.js'], 'JavaScript behavior') !== false, 'JS suite present');
+assert_true(strpos($apkg->members['solution.html'], 'function add_two') !== false, 'solution embeds JS');
+
+echo "UdemyExporter link-states (no convertible tests)\n";
+$links = UdemyExporter::loadAssignmentFile(
+    'assignments/css/link-states/assignment.json',
+    $repoRoot
+);
+$lpkg = UdemyExporter::build($links, array('repo_root' => $repoRoot));
+assert_true(!$lpkg->ok, 'link-states export not ok');
+assert_eq($lpkg->compatibility, 'unsupported', 'link-states unsupported');
 
 echo "UdemyExporter strict mode\n";
 $strict = UdemyExporter::build($assignment, array(

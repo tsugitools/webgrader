@@ -2,9 +2,11 @@
 
 ## Status
 
-Phase 0 (observations) and Phase 1 (minimal HTML export CLI) implemented.
+Phase 0 (observations), Phase 1 (minimal HTML export), and Phase 2 (CSS + basic JavaScript) implemented.
 
 Phase 1 success criterion met (2026-07-24): exported `simple-list` was entered manually into a Udemy Web Development coding exercise and graded successfully. See `docs/udemy-observations.md`.
+
+Phase 2 success criterion met (2026-07-24): CSS (`coloring-paragraphs`) and JS (`add-two-and-square`) packages graded successfully in Udemy. WebGrader-only checks (`html_validate`, `css_validate`, `css_rule_declares`, `console_includes`) are skipped with explicit warnings.
 
 Proposed design for exporting compatible WebGrader assignments into files used to author Udemy Web Development coding exercises.
 

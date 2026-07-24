@@ -1,6 +1,6 @@
 <?php
 /**
- * Phase 1 Udemy exporter: assignment JSON → in-memory package members + ZIP.
+ * Phase 1–2 Udemy exporter: assignment JSON → in-memory package members + ZIP.
  */
 require_once __DIR__ . '/HtmlBuilder.php';
 require_once __DIR__ . '/TestEmitter.php';
@@ -11,7 +11,7 @@ require_once __DIR__ . '/ZipBuilder.php';
 class UdemyExporter
 {
     const SCHEMA_VERSION = 1;
-    const EXPORT_VERSION = 1;
+    const EXPORT_VERSION = 2;
 
     /**
      * @param array $assignment Decoded assignment JSON
@@ -76,6 +76,7 @@ class UdemyExporter
         if (count($errors) === 0 && count($emitted['converted']) > 0) {
             $solVal = UdemyLocalValidator::run($solutionHtml, $emitted['converted'], $tests);
             $errors = array_merge($errors, $solVal['errors']);
+            $warnings = array_merge($warnings, $solVal['warnings']);
             if (count($solVal['failed']) > 0) {
                 foreach ($solVal['failed'] as $fail) {
                     $errors[] = array(
@@ -84,23 +85,40 @@ class UdemyExporter
                             . '": ' . $fail['detail'],
                     );
                 }
-            } else {
+            } elseif (count($solVal['passed']) > 0) {
                 $convertedExtras[] = 'Local solution validation';
             }
 
             $startVal = UdemyLocalValidator::run($starterHtml, $emitted['converted'], $tests);
             $errors = array_merge($errors, $startVal['errors']);
-            $allPass = count($startVal['failed']) === 0
-                && count($startVal['passed']) === count($emitted['converted'])
-                && count($emitted['converted']) > 0;
+            $warnings = array_merge($warnings, $startVal['warnings']);
+
+            $runCount = count($startVal['passed']) + count($startVal['failed']);
+            $allPass = $runCount > 0
+                && count($startVal['failed']) === 0
+                && count($startVal['passed']) === $runCount;
+
             if ($allPass && !$allowStarterPassAll) {
                 $errors[] = array(
                     'code' => 'STARTER_PASSES_ALL',
-                    'message' => 'Starter already passes every exported test.'
+                    'message' => 'Starter already passes every locally verified exported test.'
                         . ' Provide incomplete starter content, or pass --allow-starter-pass-all.',
                 );
-            } elseif (!$allPass) {
+            } elseif (count($startVal['failed']) > 0) {
                 $convertedExtras[] = 'Starter fails at least one test (expected)';
+            } elseif ($runCount === 0) {
+                // Browser-only tests skipped locally: ensure editable starter ≠ solution.
+                if (!self::starterDiffersFromSolution($starterFiles, $solutionFiles, $assignment)) {
+                    if (!$allowStarterPassAll) {
+                        $errors[] = array(
+                            'code' => 'STARTER_MATCHES_SOLUTION',
+                            'message' => 'Editable starter content matches the solution and'
+                                . ' no tests were verified locally. Incomplete starter required.',
+                        );
+                    }
+                } else {
+                    $convertedExtras[] = 'Starter differs from solution (local CSS/JS checks skipped)';
+                }
             }
         } elseif (count($errors) === 0 && count($emitted['converted']) === 0) {
             $warnings[] = array(
@@ -108,6 +126,8 @@ class UdemyExporter
                 'message' => 'Assignment has no convertible tests.',
             );
         }
+
+        $warnings = self::uniqueMessages($warnings);
 
         if ($strict && count($warnings) > 0 && count($errors) === 0) {
             foreach ($warnings as $w) {
@@ -304,7 +324,10 @@ class UdemyExporter
                     'message' => strtoupper($lang)
                         . ' is read-only in WebGrader but may be editable in Udemy.',
                 );
-            } elseif ($mode === 'hidden' && trim((string) (isset($files[$lang]['starter']) ? $files[$lang]['starter'] : '')) !== '') {
+            } elseif ($mode === 'hidden'
+                && trim((string) (isset($files[$lang]['starter']) ? $files[$lang]['starter'] : '')) !== ''
+            ) {
+                // Hidden non-empty content is still embedded in the combined HTML.
                 $warnings[] = array(
                     'code' => 'HIDDEN_INCLUDED',
                     'message' => strtoupper($lang)
@@ -361,6 +384,55 @@ class UdemyExporter
                 );
             }
         }
+    }
+
+    /**
+     * True when any editable logical file differs between starter and solution.
+     */
+    private static function starterDiffersFromSolution(
+        array $starterFiles,
+        array $solutionFiles,
+        array $assignment
+    ) {
+        $files = isset($assignment['files']) && is_array($assignment['files'])
+            ? $assignment['files']
+            : array();
+        foreach (array('html', 'css', 'javascript') as $lang) {
+            $mode = isset($files[$lang]['mode']) ? (string) $files[$lang]['mode'] : 'editable';
+            if ($mode !== 'editable' && $mode !== 'optional') {
+                continue;
+            }
+            $a = isset($starterFiles[$lang]) ? trim((string) $starterFiles[$lang]) : '';
+            $b = isset($solutionFiles[$lang]) ? trim((string) $solutionFiles[$lang]) : '';
+            if ($a !== $b) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Deduplicate warning/error objects by code + message.
+     *
+     * @param array $items
+     * @return array
+     */
+    private static function uniqueMessages(array $items)
+    {
+        $seen = array();
+        $out = array();
+        foreach ($items as $item) {
+            $key = is_array($item)
+                ? ((isset($item['code']) ? $item['code'] : '') . '|'
+                    . (isset($item['message']) ? $item['message'] : ''))
+                : (string) $item;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = $item;
+        }
+        return $out;
     }
 
     private static function buildInstructionsMarkdown(array $assignment)

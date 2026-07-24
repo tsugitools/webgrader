@@ -1,0 +1,31 @@
+{
+    "format": "webgrader-udemy-export",
+    "version": 1,
+    "udemy_export_version": 2,
+    "last_verified": "2026-07-24",
+    "source_assignment": "css-coloring-paragraphs-001",
+    "compatibility": "compatible_with_warnings",
+    "generated_files": [
+        "starter.html",
+        "solution.html",
+        "evaluation.js",
+        "instructions.md",
+        "manifest.json",
+        "COMPATIBILITY.md"
+    ],
+    "warnings": [
+        {
+            "code": "READONLY_NOT_PRESERVED",
+            "message": "HTML is read-only in WebGrader but may be editable in Udemy."
+        },
+        {
+            "code": "WEBGRADER_ONLY_TEST_SKIPPED",
+            "message": "WebGrader-only test \"css-valid\" (css_validate) was not exported to Udemy Jasmine."
+        },
+        {
+            "code": "LOCAL_COMPUTED_STYLE_UNVERIFIED",
+            "message": "Computed-style / event tests were not verified locally (jsdom not installed (optional; npm i jsdom for local CSS checks)). Confirm them inside Udemy."
+        }
+    ],
+    "errors": []
+}

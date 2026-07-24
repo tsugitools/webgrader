@@ -1,0 +1,23 @@
+{
+    "format": "webgrader-udemy-export",
+    "version": 1,
+    "udemy_export_version": 2,
+    "last_verified": "2026-07-24",
+    "source_assignment": "js-add-two-and-square-001",
+    "compatibility": "compatible_with_warnings",
+    "generated_files": [
+        "starter.html",
+        "solution.html",
+        "evaluation.js",
+        "instructions.md",
+        "manifest.json",
+        "COMPATIBILITY.md"
+    ],
+    "warnings": [
+        {
+            "code": "HIDDEN_INCLUDED",
+            "message": "HTML is hidden in WebGrader but was included in the combined Udemy HTML."
+        }
+    ],
+    "errors": []
+}

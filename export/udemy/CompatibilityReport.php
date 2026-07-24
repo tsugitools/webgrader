@@ -34,7 +34,7 @@ class UdemyCompatibilityReport
         $manifest = array(
             'format' => 'webgrader-udemy-export',
             'version' => 1,
-            'udemy_export_version' => 1,
+            'udemy_export_version' => 2,
             'last_verified' => self::LAST_VERIFIED,
             'source_assignment' => isset($context['source_assignment'])
                 ? $context['source_assignment']
