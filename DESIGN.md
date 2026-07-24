@@ -585,10 +585,12 @@ Phase 1 should implement only a small set of high-value declarative tests.
 - `attribute_equals`
 - `attribute_exists`
 - `html_validate` (optional; loads html-validate from a pinned CDN ES module only when present)
+- `css_validate` (optional; loads css-tree from a pinned CDN ES module only when present)
 
 ### CSS
 
 - `computed_style_equals`
+- `css_validate` (see above)
 - `element_visible`
 - `element_hidden`
 - basic geometry comparison such as same row, stacked, or ordered position

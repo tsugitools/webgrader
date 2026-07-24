@@ -1,0 +1,84 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "css-coloring-paragraphs-001",
+  "assignment_version": 2,
+  "title": "Coloring Paragraphs",
+  "prompt": "<p>The HTML below already has four paragraphs with <strong>ids</strong> and <strong>classes</strong>. Your job is to color them with CSS <code>background-color</code>.</p><ul><li><code>#title</code> — background <strong>yellow</strong></li><li><code>.intro</code> — background <strong>lightblue</strong></li><li><code>#main</code> — background <strong>orange</strong></li><li><code>.footer</code> — background <strong>pink</strong></li></ul><p>Use id selectors (<code>#…</code>) and class selectors (<code>.…</code>). Named colors like <code>yellow</code> are fine — you do not need hex codes. Keep your CSS syntactically valid (matching braces, real property names and values).</p>",
+  "files": {
+    "html": {
+      "mode": "readonly",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Coloring Paragraphs</title>\n</head>\n<body>\n  <p id=\"title\">Welcome</p>\n  <p class=\"intro\">This short page introduces CSS selectors.</p>\n  <p id=\"main\">Ids and classes let you style specific paragraphs.</p>\n  <p class=\"footer\">Thanks for reading.</p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "editable",
+      "starter": "/* Color each paragraph using its id or class selector */\n\n"
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "css-valid",
+      "name": "CSS validates",
+      "type": "css_validate",
+      "mode": "recommended",
+      "points": 2,
+      "feedback": "Fix the CSS validation errors shown in the test details (for example, missing braces or invalid colors)."
+    },
+    {
+      "id": "title-bg",
+      "name": "#title background is yellow",
+      "type": "computed_style_equals",
+      "selector": "#title",
+      "property": "background-color",
+      "expected": "yellow",
+      "points": 2,
+      "feedback": "Set background-color: yellow on #title."
+    },
+    {
+      "id": "intro-bg",
+      "name": ".intro background is lightblue",
+      "type": "computed_style_equals",
+      "selector": ".intro",
+      "property": "background-color",
+      "expected": "lightblue",
+      "points": 2,
+      "feedback": "Set background-color: lightblue on .intro."
+    },
+    {
+      "id": "main-bg",
+      "name": "#main background is orange",
+      "type": "computed_style_equals",
+      "selector": "#main",
+      "property": "background-color",
+      "expected": "orange",
+      "points": 2,
+      "feedback": "Set background-color: orange on #main."
+    },
+    {
+      "id": "footer-bg",
+      "name": ".footer background is pink",
+      "type": "computed_style_equals",
+      "selector": ".footer",
+      "property": "background-color",
+      "expected": "pink",
+      "points": 2,
+      "feedback": "Set background-color: pink on .footer."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "css": "/* Color each paragraph using its id or class selector */\n\n#title {\n  background-color: yellow;\n}\n\n.intro {\n  background-color: lightblue;\n}\n\n#main {\n  background-color: orange;\n}\n\n.footer {\n  background-color: pink;\n}\n"
+  }
+}

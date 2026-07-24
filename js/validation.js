@@ -14,7 +14,9 @@
         text_contains: true,
         attribute_equals: true,
         attribute_exists: true,
-        html_validate: true
+        html_validate: true,
+        css_validate: true,
+        computed_style_equals: true
     };
 
     function isObject(v) {
@@ -97,7 +99,7 @@
                 if (t.type === 'selector_exists' || t.type === 'selector_not_exists'
                     || t.type === 'selector_count' || t.type === 'text_equals'
                     || t.type === 'text_contains' || t.type === 'attribute_equals'
-                    || t.type === 'attribute_exists') {
+                    || t.type === 'attribute_exists' || t.type === 'computed_style_equals') {
                     if (!t.selector || typeof t.selector !== 'string') {
                         errors.push('Test ' + (t.id || i) + ' requires selector.');
                     }
@@ -105,8 +107,17 @@
                 if (t.type === 'html_validate' && t.preset != null && typeof t.preset !== 'string') {
                     errors.push('Test ' + (t.id || i) + ' preset must be a string when set.');
                 }
+                if (t.type === 'css_validate') {
+                    if (t.mode != null && typeof t.mode !== 'string') {
+                        errors.push('Test ' + (t.id || i) + ' mode must be a string when set.');
+                    }
+                    if (t.preset != null && typeof t.preset !== 'string') {
+                        errors.push('Test ' + (t.id || i) + ' preset must be a string when set.');
+                    }
+                }
                 if (t.type === 'selector_count' || t.type === 'text_equals'
-                    || t.type === 'text_contains' || t.type === 'attribute_equals') {
+                    || t.type === 'text_contains' || t.type === 'attribute_equals'
+                    || t.type === 'computed_style_equals') {
                     if (typeof t.expected === 'undefined') {
                         errors.push('Test ' + (t.id || i) + ' requires expected.');
                     }
@@ -114,6 +125,11 @@
                 if (t.type === 'attribute_equals' || t.type === 'attribute_exists') {
                     if (!t.attribute || typeof t.attribute !== 'string') {
                         errors.push('Test ' + (t.id || i) + ' requires attribute.');
+                    }
+                }
+                if (t.type === 'computed_style_equals') {
+                    if (!t.property || typeof t.property !== 'string') {
+                        errors.push('Test ' + (t.id || i) + ' requires property.');
                     }
                 }
             });

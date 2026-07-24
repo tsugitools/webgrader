@@ -123,6 +123,7 @@ window.WEBGRADER = {
 </script>
 <script src="js/validation.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>
 <script src="js/html-validate.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>
+<script src="js/css-validate.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>
 <script src="js/console-capture.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>
 <script src="js/tests.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>
 <script src="js/runtime.js?v=<?php echo htmlspecialchars($assetBust); ?>"></script>

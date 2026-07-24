@@ -62,17 +62,18 @@
         });
     }
 
-    function solutionFiles() {
-        var files = {
-            html: starterFor('html'),
-            css: starterFor('css'),
-            javascript: starterFor('javascript')
-        };
+    /**
+     * Apply reference solution into editable editors only.
+     * Readonly / hidden tabs keep whatever they already show.
+     */
+    function writeSolutionEditors() {
         FILE_KEYS.forEach(function (key) {
+            if (fileMode(key) !== 'editable') return;
             var s = solutionFor(key);
-            if (s !== null) files[key] = s;
+            if (s === null) return;
+            var ta = $('#editor-' + key);
+            if (ta) ta.value = s;
         });
-        return files;
     }
 
     function persistKey() {
@@ -432,12 +433,26 @@
 
         var needsHv = window.WebGraderHtmlValidate
             && window.WebGraderHtmlValidate.exerciseNeedsHtmlValidate(exercise);
-        var ready = needsHv && window.WebGraderHtmlValidate.load
-            ? window.WebGraderHtmlValidate.load().catch(function () { /* runTests reports failure */ })
-            : Promise.resolve();
+        var needsCv = window.WebGraderCssValidate
+            && window.WebGraderCssValidate.exerciseNeedsCssValidate(exercise);
+        var ready = Promise.resolve();
+        if (needsHv && window.WebGraderHtmlValidate.load) {
+            ready = ready.then(function () {
+                return window.WebGraderHtmlValidate.load().catch(function () { /* runTests reports */ });
+            });
+        }
+        if (needsCv && window.WebGraderCssValidate.load) {
+            ready = ready.then(function () {
+                return window.WebGraderCssValidate.load().catch(function () { /* runTests reports */ });
+            });
+        }
 
         ready.then(function () {
-            return Tests.runTests(doc, exercise, { htmlSource: readEditors().html });
+            var editors = readEditors();
+            return Tests.runTests(doc, exercise, {
+                htmlSource: editors.html,
+                cssSource: editors.css
+            });
         }).then(function (report) {
             renderResults($('#resultsPanel'), report);
 
@@ -497,10 +512,10 @@
             setStatus('error', 'No reference solution configured for this assignment');
             return;
         }
-        if (!window.confirm('Load the reference solution into the editors? This replaces the current source for this session.')) {
+        if (!window.confirm('Load the reference solution into the editable editors? Readonly tabs are left unchanged.')) {
             return;
         }
-        writeEditors(solutionFiles());
+        writeSolutionEditors();
         Runtime.bumpSourceRevision();
         Runtime.clearPreview($('#previewHost'));
         if (Console && Console.clear) Console.clear();
@@ -619,10 +634,14 @@
         Runtime.bumpSourceRevision();
         updateGradeButton();
 
-        // Prefetch CDN validator only when this assignment opts in.
+        // Prefetch CDN validators only when this assignment opts in.
         if (window.WebGraderHtmlValidate
             && window.WebGraderHtmlValidate.exerciseNeedsHtmlValidate(exercise)) {
             window.WebGraderHtmlValidate.load().catch(function () { /* Grade will surface errors */ });
+        }
+        if (window.WebGraderCssValidate
+            && window.WebGraderCssValidate.exerciseNeedsCssValidate(exercise)) {
+            window.WebGraderCssValidate.load().catch(function () { /* Grade will surface errors */ });
         }
     }
 

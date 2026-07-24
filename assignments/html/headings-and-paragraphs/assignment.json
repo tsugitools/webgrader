@@ -2,7 +2,7 @@
   "type": "webgrader",
   "schema_version": 1,
   "id": "html-headings-and-paragraphs-001",
-  "assignment_version": 3,
+  "assignment_version": 4,
   "title": "Headings and Paragraphs",
   "prompt": "<p>Create a short page about your favorite place.</p><ul><li>Use an <code>&lt;h1&gt;</code> with the text <strong>My Favorite Place</strong>.</li><li>Add a paragraph (<code>&lt;p&gt;</code>) that contains the word <strong>because</strong>.</li><li>Add a second-level heading (<code>&lt;h2&gt;</code>) with the text <strong>Details</strong>.</li></ul>",
   "files": {
@@ -25,6 +25,14 @@
   },
   "assets": [],
   "tests": [
+    {
+      "id": "html-valid",
+      "name": "HTML validates",
+      "type": "html_validate",
+      "preset": "html-validate:recommended",
+      "points": 1,
+      "feedback": "Fix the HTML validation errors shown in the test details (for example, close your tags)."
+    },
     {
       "id": "has-h1",
       "name": "Has an h1 heading",
@@ -67,14 +75,6 @@
       "expected": "Details",
       "points": 1,
       "feedback": "Add an <h2> whose text is \"Details\"."
-    },
-    {
-      "id": "html-valid",
-      "name": "HTML validates",
-      "type": "html_validate",
-      "preset": "html-validate:recommended",
-      "points": 1,
-      "feedback": "Fix the HTML validation errors shown in the test details (for example, close your tags)."
     }
   ],
   "grading": {

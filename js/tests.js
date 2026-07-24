@@ -1,6 +1,6 @@
 /**
  * Declarative DOM test handlers for WebGrader (Phase 1).
- * runTests is async so optional html_validate can load from CDN.
+ * runTests is async so optional html_validate / css_validate can load from CDN.
  */
 (function (global) {
     'use strict';
@@ -107,8 +107,63 @@
                     ? 'Attribute ' + test.attribute + ' is present'
                     : 'Attribute ' + test.attribute + ' is missing'
             };
+        },
+        computed_style_equals: function (doc, test) {
+            var el = first(doc, test.selector);
+            if (!el) {
+                return { pass: false, detail: 'No match for ' + test.selector };
+            }
+            if (!test.property || typeof test.property !== 'string') {
+                var err = new Error('computed_style_equals requires property');
+                err.code = 'config';
+                throw err;
+            }
+            if (typeof test.expected === 'undefined') {
+                var err2 = new Error('computed_style_equals requires expected');
+                err2.code = 'config';
+                throw err2;
+            }
+            var win = doc.defaultView;
+            if (!win || !win.getComputedStyle) {
+                return { pass: false, detail: 'Cannot read computed style (no window)' };
+            }
+            var prop = String(test.property).trim();
+            var actual = win.getComputedStyle(el).getPropertyValue(prop).trim();
+            var expected = String(test.expected).trim();
+            if (isColorProperty(prop)) {
+                actual = normalizeCssColor(doc, actual);
+                expected = normalizeCssColor(doc, expected);
+            }
+            return {
+                pass: actual === expected,
+                detail: 'Got "' + actual + '", expected "' + expected + '"'
+            };
         }
     };
+
+    function isColorProperty(prop) {
+        var p = String(prop || '').toLowerCase();
+        return p === 'color'
+            || p.indexOf('color') !== -1
+            || p === 'fill'
+            || p === 'stroke';
+    }
+
+    /**
+     * Resolve any CSS color (name, hex, rgb) to the browser's computed rgb/rgba form.
+     */
+    function normalizeCssColor(doc, value) {
+        var raw = String(value || '').trim();
+        if (!raw) return raw;
+        var win = doc.defaultView;
+        if (!win || !doc.body) return raw;
+        var probe = doc.createElement('div');
+        probe.style.backgroundColor = raw;
+        doc.body.appendChild(probe);
+        var resolved = win.getComputedStyle(probe).backgroundColor;
+        doc.body.removeChild(probe);
+        return (resolved || raw).trim();
+    }
 
     function pushResult(results, test, points, outcome, kinds) {
         var pass = !!outcome.pass;
@@ -127,6 +182,29 @@
     }
 
     /**
+     * Run html_validate / css_validate before behavioral tests so feedback
+     * leads with syntax/validity issues. Relative order within each group
+     * is preserved.
+     */
+    function orderTestsForGrading(tests) {
+        var html = [];
+        var css = [];
+        var rest = [];
+        tests.forEach(function (t) {
+            if (!t || !t.type) {
+                rest.push(t);
+            } else if (t.type === 'html_validate') {
+                html.push(t);
+            } else if (t.type === 'css_validate') {
+                css.push(t);
+            } else {
+                rest.push(t);
+            }
+        });
+        return html.concat(css).concat(rest);
+    }
+
+    /**
      * Run all tests against a document (and optional HTML source).
      * @returns {Promise<object>}
      */
@@ -134,6 +212,7 @@
         options = options || {};
         var V = global.WebGraderValidation;
         var HV = global.WebGraderHtmlValidate;
+        var CV = global.WebGraderCssValidate;
         var maximum = V ? V.maximumPoints(exercise) : 0;
         var results = [];
         var earned = 0;
@@ -151,7 +230,9 @@
             });
         }
 
-        var tests = Array.isArray(exercise.tests) ? exercise.tests : [];
+        var tests = orderTestsForGrading(
+            Array.isArray(exercise.tests) ? exercise.tests : []
+        );
         var i = 0;
 
         function finish() {
@@ -199,6 +280,33 @@
                     earned += pushResult(results, test, points, {
                         pass: true,
                         detail: 'HTML validator unavailable — credited automatically. (' + reason + ')'
+                    }, 'pass');
+                }).then(runNext);
+            }
+
+            if (test.type === 'css_validate') {
+                if (!CV || !CV.validateCssSource) {
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'CSS validator unavailable — credited automatically.'
+                    }, 'pass');
+                    return runNext();
+                }
+                var cssSource = options.cssSource;
+                if (typeof cssSource !== 'string') {
+                    cssSource = '';
+                }
+                return CV.validateCssSource(cssSource, test).then(function (outcome) {
+                    if (outcome && outcome.bypass) {
+                        earned += pushResult(results, test, points, outcome, 'pass');
+                    } else {
+                        earned += pushResult(results, test, points, outcome, 'fail');
+                    }
+                }).catch(function (err) {
+                    var reason = (err && err.message) ? err.message : String(err);
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'CSS validator unavailable — credited automatically. (' + reason + ')'
                     }, 'pass');
                 }).then(runNext);
             }
@@ -257,6 +365,7 @@
 
     global.WebGraderTests = {
         runTests: runTests,
-        handlers: handlers
+        handlers: handlers,
+        orderTestsForGrading: orderTestsForGrading
     };
 })(window);

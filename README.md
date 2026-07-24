@@ -10,11 +10,11 @@ Phase 0–1 implemented:
 
 - Thin PHP shell mirroring DBGrader (`window.WEBGRADER` bootstrap)
 - Learner edit → Run → Grade loop with dirty-state protection
-- Declarative DOM tests and partial credit
+- Declarative DOM tests, `computed_style_equals`, optional HTML/CSS validators, and partial credit
 - Student source autosave (`student-save.php` + localStorage backup)
-- Built-in HTML assignments under `assignments/html/`
+- Built-in HTML and CSS assignments under `assignments/`
 
-Later phases (CSS tests, console capture, mock `fetch`, rich authoring) are described in [DESIGN.md](DESIGN.md).
+Later phases (mock `fetch`, rich authoring) are described in [DESIGN.md](DESIGN.md).
 
 ## Tool layout
 
@@ -28,6 +28,7 @@ webgrader/
   js/                   # validation, runtime, tests, UI
   css/webgrader.css
   assignments/html/…/assignment.json
+  assignments/css/…/assignment.json
 ```
 
 ## Instructor setup
@@ -44,7 +45,7 @@ LTI custom parameter (optional):
 { "key": "exercise", "value": "HeadingsAndParagraphs" }
 ```
 
-Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`.
+Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`.
 
 ## Learner workflow
 
@@ -74,6 +75,28 @@ Omit the test entirely for assignments that should not grade markup validity. Th
 `html-validate:standard` follows HTML5 optional end tags (a missing `</p>` can still be “valid”). Prefer **`html-validate:recommended`**, which includes `no-implicit-close` and catches that common learner mistake.
 
 If the CDN/library fails to load or run, that test is **credited automatically** (same idea as a soft bypass when an external validator is down). Student HTML errors still fail normally.
+
+### Optional CSS validation
+
+Assignments may include a test with `"type": "css_validate"`. That loads [css-tree](https://github.com/csstree/csstree) from a pinned CDN ES module (`esm.sh`) only when needed.
+
+```json
+{
+  "id": "css-valid",
+  "name": "CSS validates",
+  "type": "css_validate",
+  "mode": "recommended",
+  "points": 2,
+  "feedback": "Fix the CSS validation errors shown in the test details."
+}
+```
+
+- **`recommended`** (default): balanced braces, parse errors, and property/value checks (e.g. `colour` or `margin: 10` fail).
+- **`syntax`**: braces + parse only (skip property/value matching).
+
+CDN/library failure credits the test automatically, same as HTML validation.
+
+The grader always runs `html_validate` then `css_validate` before other tests (results panel order matches), even if they appear later in the assignment JSON.
 
 ## Locked Phase 1 decisions
 
