@@ -1,0 +1,80 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "html-highlighting-with-span-001",
+  "assignment_version": 4,
+  "title": "Highlighting with Span",
+  "prompt": "<p>A <code>&lt;span&gt;</code> marks a piece of text <em>inside</em> a sentence without starting a new block — perfect for highlighting a word or phrase.</p><p>In the paragraph below, wrap these words in spans (keep the rest of the sentence unchanged):</p><ul><li>Wrap <strong>important</strong> in <code>&lt;span class=\"important\"&gt;…&lt;/span&gt;</code></li><li>Wrap <strong>quietly</strong> in <code>&lt;span class=\"quiet\"&gt;…&lt;/span&gt;</code></li><li>Wrap <strong>surprise</strong> in <code>&lt;span id=\"surprise\"&gt;…&lt;/span&gt;</code></li></ul><p>CSS for those hooks is already provided (read-only). After you Run, the three words should look styled differently.</p>",
+  "files": {
+    "html": {
+      "mode": "editable",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Highlighting with Span</title>\n</head>\n<body>\n  <p>This is an important tip: speak quietly, then shout surprise!</p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "readonly",
+      "starter": ".important {\n  color: #c00000;\n  font-weight: bold;\n}\n\n.quiet {\n  color: #595959;\n  font-weight: bold;\n  font-style: italic;\n}\n\n#surprise {\n  color: #b45309;\n  text-decoration: underline;\n}\n"
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "html-valid",
+      "name": "HTML validates",
+      "type": "html_validate",
+      "preset": "html-validate:recommended",
+      "points": 1,
+      "feedback": "Fix the HTML validation errors shown in the test details."
+    },
+    {
+      "id": "span-important",
+      "name": "span.important says important",
+      "type": "text_equals",
+      "selector": "span.important",
+      "expected": "important",
+      "points": 3,
+      "feedback": "Wrap the word important in <span class=\"important\">important</span>."
+    },
+    {
+      "id": "span-quiet",
+      "name": "span.quiet says quietly",
+      "type": "text_equals",
+      "selector": "span.quiet",
+      "expected": "quietly",
+      "points": 3,
+      "feedback": "Wrap the word quietly in <span class=\"quiet\">quietly</span>."
+    },
+    {
+      "id": "span-surprise",
+      "name": "#surprise says surprise",
+      "type": "text_equals",
+      "selector": "span#surprise",
+      "expected": "surprise",
+      "points": 2,
+      "feedback": "Wrap the word surprise in <span id=\"surprise\">surprise</span>."
+    },
+    {
+      "id": "three-spans",
+      "name": "Exactly three spans",
+      "type": "selector_count",
+      "selector": "span",
+      "expected": 3,
+      "points": 1,
+      "feedback": "Use exactly three <span> elements — one for each highlighted word."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Highlighting with Span</title>\n</head>\n<body>\n  <p>This is an <span class=\"important\">important</span> tip: speak <span class=\"quiet\">quietly</span>, then shout <span id=\"surprise\">surprise</span>!</p>\n</body>\n</html>\n"
+  }
+}

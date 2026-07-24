@@ -1,0 +1,84 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "css-putting-the-cascade-001",
+  "assignment_version": 3,
+  "title": "Putting the Cascade in CSS",
+  "prompt": "<p>CSS stands for <strong>Cascading</strong> Style Sheets — when more than one rule matches, the browser picks a winner. Specificity usually decides: <strong>id</strong> beats <strong>class</strong> beats <strong>type</strong>. When specificity is tied, the <strong>later</strong> rule wins.</p><p>Read a short overview on <a href=\"https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics/Handling_conflicts\" target=\"_blank\" rel=\"noopener\">MDN: Handling conflicts</a>.</p><p>The HTML is fixed. Write CSS so the computed text colors are:</p><ul><li>Every <code>p</code> — start with <code>color: blue</code> (type selector)</li><li>Anything with class <code>accent</code> — <code>color: green</code> (class beats type)</li><li>The element with id <code>hero</code> — <code>color: red</code> (id beats class)</li><li>The paragraph with both <code>early</code> and <code>late</code> — make <code>color: purple</code> win using <strong>source order</strong> (same specificity; put the winning rule last)</li></ul><p>After you Run, you should see blue, green, red, then purple text down the page.</p>",
+  "files": {
+    "html": {
+      "mode": "readonly",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Putting the Cascade in CSS</title>\n</head>\n<body>\n  <p>Type selector only</p>\n  <p class=\"accent\">Class beats type</p>\n  <p class=\"accent\" id=\"hero\">Id beats class</p>\n  <p class=\"early late\">Later rule wins when specificity ties</p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "editable",
+      "starter": "/* id > class > type; if specificity ties, later wins */\n\n"
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "css-valid",
+      "name": "CSS validates",
+      "type": "css_validate",
+      "mode": "recommended",
+      "points": 2,
+      "feedback": "Fix the CSS validation errors shown in the test details."
+    },
+    {
+      "id": "type-blue",
+      "name": "First paragraph is blue (type)",
+      "type": "computed_style_equals",
+      "selector": "p:first-of-type",
+      "property": "color",
+      "expected": "blue",
+      "points": 2,
+      "feedback": "Use a type selector so every p starts with color: blue."
+    },
+    {
+      "id": "class-green",
+      "name": ".accent (not #hero) is green",
+      "type": "computed_style_equals",
+      "selector": "p.accent:not(#hero)",
+      "property": "color",
+      "expected": "green",
+      "points": 2,
+      "feedback": "Add a .accent rule with color: green so it overrides the type selector."
+    },
+    {
+      "id": "id-red",
+      "name": "#hero is red",
+      "type": "computed_style_equals",
+      "selector": "#hero",
+      "property": "color",
+      "expected": "red",
+      "points": 2,
+      "feedback": "Add a #hero rule with color: red so the id beats the class."
+    },
+    {
+      "id": "order-purple",
+      "name": ".early.late ends up purple (order)",
+      "type": "computed_style_equals",
+      "selector": "p.early.late",
+      "property": "color",
+      "expected": "purple",
+      "points": 2,
+      "feedback": "Write .early and .late rules with the same specificity; put color: purple on the rule that comes last."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "css": "/* id > class > type; if specificity ties, later wins */\n\np {\n  color: blue;\n}\n\n.accent {\n  color: green;\n}\n\n#hero {\n  color: red;\n}\n\n.early {\n  color: orange;\n}\n\n.late {\n  color: purple;\n}\n"
+  }
+}

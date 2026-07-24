@@ -16,6 +16,8 @@ $assignments = array(
     'ValidatedHtmlPage' => 'HTML: Validated HTML Page',
     'ColoringParagraphs' => 'CSS: Coloring Paragraphs',
     'FourCorners' => 'CSS: Four Corners',
+    'PuttingTheCascade' => 'CSS: Putting the Cascade in CSS',
+    'HighlightingWithSpan' => 'CSS: Highlighting with Span',
 );
 
 /**
@@ -29,6 +31,8 @@ function webgrader_builtin_relpath($key) {
         'ValidatedHtmlPage' => 'assignments/html/validated-html-page',
         'ColoringParagraphs' => 'assignments/css/coloring-paragraphs',
         'FourCorners' => 'assignments/css/four-corners',
+        'PuttingTheCascade' => 'assignments/css/putting-the-cascade',
+        'HighlightingWithSpan' => 'assignments/html/highlighting-with-span',
     );
     return isset($map[$key]) ? $map[$key] : null;
 }
