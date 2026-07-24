@@ -17,6 +17,7 @@
         html_validate: true,
         css_validate: true,
         css_rule_declares: true,
+        axe_validate: true,
         computed_style_equals: true,
         computed_styles_equals: true,
         console_includes: true,

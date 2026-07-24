@@ -494,6 +494,9 @@ class UdemyExporter
         if (!empty($types['html_validate']) || !empty($types['css_validate'])) {
             $repairs[] = 'HTML/CSS validator tests stay in WebGrader only; they are skipped for Udemy. Keep declarative DOM or computed-style tests for Udemy grading.';
         }
+        if (!empty($types['axe_validate'])) {
+            $repairs[] = 'axe_validate (accessibility) stays in WebGrader only; it is skipped for Udemy. Keep the guided DOM checks (lang, alt, labels, button text) for Udemy export.';
+        }
         if (!empty($types['css_rule_declares'])) {
             $repairs[] = 'Replace css_rule_declares with computed_style_equals where the style is observable, or keep the exercise WebGrader-only for :hover/:visited rules.';
         }

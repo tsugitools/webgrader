@@ -483,6 +483,8 @@
             && window.WebGraderHtmlValidate.exerciseNeedsHtmlValidate(exercise);
         var needsCv = window.WebGraderCssValidate
             && window.WebGraderCssValidate.exerciseNeedsCssValidate(exercise);
+        var needsAxe = window.WebGraderAxeValidate
+            && window.WebGraderAxeValidate.exerciseNeedsAxeValidate(exercise);
         var ready = Promise.resolve();
         if (needsHv && window.WebGraderHtmlValidate.load) {
             ready = ready.then(function () {
@@ -492,6 +494,11 @@
         if (needsCv && window.WebGraderCssValidate.load) {
             ready = ready.then(function () {
                 return window.WebGraderCssValidate.load().catch(function () { /* runTests reports */ });
+            });
+        }
+        if (needsAxe && window.WebGraderAxeValidate.load) {
+            ready = ready.then(function () {
+                return window.WebGraderAxeValidate.load().catch(function () { /* runTests reports */ });
             });
         }
 
@@ -690,6 +697,10 @@
         if (window.WebGraderCssValidate
             && window.WebGraderCssValidate.exerciseNeedsCssValidate(exercise)) {
             window.WebGraderCssValidate.load().catch(function () { /* Grade will surface errors */ });
+        }
+        if (window.WebGraderAxeValidate
+            && window.WebGraderAxeValidate.exerciseNeedsAxeValidate(exercise)) {
+            window.WebGraderAxeValidate.load().catch(function () { /* Grade will surface errors */ });
         }
     }
 

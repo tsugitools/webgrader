@@ -1,0 +1,93 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "html-fix-accessibility-001",
+  "assignment_version": 2,
+  "title": "Fix Accessibility",
+  "prompt": "<p>This page looks fine in the preview, but it fails automated accessibility checks. Your job is to <strong>fix the accessibility problems</strong>, not redesign the page.</p><p>Press <strong>Run / Restart</strong>, then <strong>Grade</strong>. Read the accessibility issues in the results. Fix them in the HTML and Grade again until everything passes.</p><ul><li>Give the document a language: set <code>lang=\"en\"</code> on <code>&lt;html&gt;</code>.</li><li>Give the image a text alternative: add an <code>alt</code> attribute that describes the picture (for example <strong>A friendly cat</strong>). The image file is <code>cat-v1.png</code> (provided with the assignment).</li><li>Associate the text field with its label: use matching <code>id</code> / <code>for</code> values (the label already says Name).</li><li>Give the button an accessible name: put visible text inside the <code>&lt;button&gt;</code> (for example <strong>Save</strong>).</li></ul><p><em>Note:</em> Automated checkers catch many common mistakes but not every accessibility issue. Fix what Grade reports for this exercise.</p>",
+  "files": {
+    "html": {
+      "mode": "editable",
+      "starter": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>Club signup</title>\n</head>\n<body>\n  <h1>Club signup</h1>\n  <p>Welcome! Tell us your name and save.</p>\n\n  <p>\n    <img src=\"cat-v1.png\" width=\"120\">\n  </p>\n\n  <p>\n    <label>Name</label>\n    <input type=\"text\" name=\"name\">\n  </p>\n\n  <p>\n    <button type=\"button\"></button>\n  </p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "hidden",
+      "starter": ""
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run",
+    "base_href": "assignments/a11y/fix-accessibility/assets/"
+  },
+  "assets": [
+    {
+      "id": "cat-image",
+      "path": "assignments/a11y/fix-accessibility/assets/cat-v1.png",
+      "type": "image",
+      "required": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "a11y-axe",
+      "name": "Accessibility checks pass",
+      "type": "axe_validate",
+      "runOnly": [
+        "html-has-lang",
+        "image-alt",
+        "label",
+        "button-name"
+      ],
+      "points": 4,
+      "feedback": "Fix the accessibility issues listed in the test details (language, image alt, input label, button name)."
+    },
+    {
+      "id": "html-lang",
+      "name": "html lang is en",
+      "type": "attribute_equals",
+      "selector": "html",
+      "attribute": "lang",
+      "expected": "en",
+      "points": 1,
+      "feedback": "Set lang=\"en\" on the <html> element."
+    },
+    {
+      "id": "img-alt",
+      "name": "Image has alt text",
+      "type": "attribute_exists",
+      "selector": "img",
+      "attribute": "alt",
+      "points": 2,
+      "feedback": "Add an alt attribute on the <img> (for example alt=\"A friendly cat\")."
+    },
+    {
+      "id": "label-for",
+      "name": "Label is associated with the input",
+      "type": "selector_exists",
+      "selector": "label[for]",
+      "points": 2,
+      "feedback": "Give the input an id and set the label's for attribute to that same id."
+    },
+    {
+      "id": "button-text",
+      "name": "Button has visible text",
+      "type": "text_contains",
+      "selector": "button",
+      "expected": "Save",
+      "points": 1,
+      "feedback": "Put the word Save inside the <button>."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Club signup</title>\n</head>\n<body>\n  <h1>Club signup</h1>\n  <p>Welcome! Tell us your name and save.</p>\n\n  <p>\n    <img src=\"cat-v1.png\" width=\"120\" alt=\"A friendly cat\">\n  </p>\n\n  <p>\n    <label for=\"name\">Name</label>\n    <input type=\"text\" name=\"name\" id=\"name\">\n  </p>\n\n  <p>\n    <button type=\"button\">Save</button>\n  </p>\n</body>\n</html>\n"
+  }
+}

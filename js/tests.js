@@ -1,6 +1,6 @@
 /**
  * Declarative DOM test handlers for WebGrader (Phase 1).
- * runTests is async so optional html_validate / css_validate can load from CDN.
+ * runTests is async so optional html_validate / css_validate / axe_validate can load from CDN.
  */
 (function (global) {
     'use strict';
@@ -418,13 +418,14 @@
     }
 
     /**
-     * Run html_validate / css_validate before behavioral tests so feedback
-     * leads with syntax/validity issues. Relative order within each group
-     * is preserved.
+     * Run html_validate / css_validate / axe_validate before behavioral tests
+     * so feedback leads with syntax/validity/a11y issues. Relative order
+     * within each group is preserved.
      */
     function orderTestsForGrading(tests) {
         var html = [];
         var css = [];
+        var axe = [];
         var rest = [];
         tests.forEach(function (t) {
             if (!t || !t.type) {
@@ -433,11 +434,13 @@
                 html.push(t);
             } else if (t.type === 'css_validate') {
                 css.push(t);
+            } else if (t.type === 'axe_validate') {
+                axe.push(t);
             } else {
                 rest.push(t);
             }
         });
-        return html.concat(css).concat(rest);
+        return html.concat(css).concat(axe).concat(rest);
     }
 
     /**
@@ -449,6 +452,7 @@
         var V = global.WebGraderValidation;
         var HV = global.WebGraderHtmlValidate;
         var CV = global.WebGraderCssValidate;
+        var AV = global.WebGraderAxeValidate;
         var maximum = V ? V.maximumPoints(exercise) : 0;
         var results = [];
         var earned = 0;
@@ -570,6 +574,29 @@
                     earned += pushResult(results, test, points, {
                         pass: true,
                         detail: 'CSS rule checker unavailable — credited automatically. (' + reason + ')'
+                    }, 'pass');
+                }).then(runNext);
+            }
+
+            if (test.type === 'axe_validate') {
+                if (!AV || !AV.runAxe) {
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'Accessibility checker unavailable — credited automatically.'
+                    }, 'pass');
+                    return runNext();
+                }
+                return AV.runAxe(doc, test).then(function (outcome) {
+                    if (outcome && outcome.bypass) {
+                        earned += pushResult(results, test, points, outcome, 'pass');
+                    } else {
+                        earned += pushResult(results, test, points, outcome, 'fail');
+                    }
+                }).catch(function (err) {
+                    var reason = (err && err.message) ? err.message : String(err);
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'Accessibility checker unavailable — credited automatically. (' + reason + ')'
                     }, 'pass');
                 }).then(runNext);
             }

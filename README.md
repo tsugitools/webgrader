@@ -10,9 +10,9 @@ Phase 0–1 implemented:
 
 - Thin PHP shell mirroring DBGrader (`window.WEBGRADER` bootstrap)
 - Learner edit → Run → Grade loop with dirty-state protection
-- Declarative DOM tests, `computed_style_equals`, optional HTML/CSS validators, and partial credit
+- Declarative DOM tests, `computed_style_equals`, optional HTML/CSS validators, optional `axe_validate` accessibility checks, and partial credit
 - Student source autosave (`student-save.php` + localStorage backup)
-- Built-in HTML and CSS assignments under `assignments/`
+- Built-in HTML, CSS, and JavaScript assignments under `assignments/`
 
 Later phases (mock `fetch`, rich authoring) are described in [DESIGN.md](DESIGN.md).
 
@@ -31,6 +31,7 @@ webgrader/
   css/webgrader.css
   assignments/html/…/assignment.json
   assignments/css/…/assignment.json
+  assignments/a11y/…/assignment.json
   assignments/javascript/…/assignment.json
 ```
 
@@ -48,7 +49,7 @@ LTI custom parameter (optional):
 { "key": "exercise", "value": "HeadingsAndParagraphs" }
 ```
 
-Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`, `HelloWorld`, `AddTwoAndSquare`.
+Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`, `FixAccessibility`, `HelloWorld`, `AddTwoAndSquare`.
 
 ## Learner workflow
 
@@ -78,6 +79,27 @@ Omit the test entirely for assignments that should not grade markup validity. Th
 `html-validate:standard` follows HTML5 optional end tags (a missing `</p>` can still be “valid”). Prefer **`html-validate:recommended`**, which includes `no-implicit-close` and catches that common learner mistake.
 
 If the CDN/library fails to load or run, that test is **credited automatically** (same idea as a soft bypass when an external validator is down). Student HTML errors still fail normally.
+
+### Optional accessibility checks (axe-core)
+
+Assignments may include a test with `"type": "axe_validate"`. That loads [axe-core](https://github.com/dequelabs/axe-core) from a pinned CDN script only when needed and runs it against the **live preview iframe** after Run.
+
+```json
+{
+  "id": "a11y-axe",
+  "name": "Accessibility checks pass",
+  "type": "axe_validate",
+  "runOnly": ["html-has-lang", "image-alt", "label", "button-name"],
+  "points": 4,
+  "feedback": "Fix the accessibility issues listed in the test details."
+}
+```
+
+- **`runOnly`**: array of axe rule ids (recommended for teaching) or an axe `runOnly` object.
+- **`tags`**: optional tag list (e.g. `wcag2a`) when you do not pin individual rules.
+- **`impact`**: optional minimum impact (`moderate`, `serious`, `critical`).
+
+CDN/library failure credits the test automatically, same as HTML validation. Built-in example: Settings → **A11Y: Fix Accessibility** (`FixAccessibility`).
 
 ### Optional CSS validation
 
@@ -115,7 +137,7 @@ CDN/library failure credits the test automatically, same as HTML validation.
 }
 ```
 
-The grader always runs `html_validate` then `css_validate` before other tests (results panel order matches), even if they appear later in the assignment JSON.
+The grader always runs `html_validate`, then `css_validate`, then `axe_validate` before other tests (results panel order matches), even if they appear later in the assignment JSON.
 
 ## Locked Phase 1 decisions
 

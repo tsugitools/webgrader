@@ -19,6 +19,7 @@ $assignments = array(
     'PuttingTheCascade' => 'CSS: Putting the Cascade in CSS',
     'HighlightingWithSpan' => 'CSS: Highlighting with Span',
     'LinkStates' => 'CSS: Link States',
+    'FixAccessibility' => 'A11Y: Fix Accessibility',
     'HelloWorld' => 'JavaScript: Hello World',
     'AddTwoAndSquare' => 'JavaScript: Add Two and Square',
 );
@@ -32,6 +33,7 @@ function webgrader_builtin_relpath($key) {
         'LinksAndImages' => 'assignments/html/links-and-images',
         'SimpleList' => 'assignments/html/simple-list',
         'ValidatedHtmlPage' => 'assignments/html/validated-html-page',
+        'FixAccessibility' => 'assignments/a11y/fix-accessibility',
         'ColoringParagraphs' => 'assignments/css/coloring-paragraphs',
         'FourCorners' => 'assignments/css/four-corners',
         'PuttingTheCascade' => 'assignments/css/putting-the-cascade',

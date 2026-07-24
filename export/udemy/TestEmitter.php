@@ -13,6 +13,7 @@ class UdemyTestEmitter
         'text_equals',
         'text_contains',
         'attribute_equals',
+        'attribute_exists',
         'class_present',
         // Phase 2 CSS / JS
         'computed_style_equals',
@@ -32,6 +33,7 @@ class UdemyTestEmitter
         'css_validate',
         'css_rule_declares',
         'console_includes',
+        'axe_validate',
     );
 
     private static $htmlTypes = array(
@@ -41,6 +43,7 @@ class UdemyTestEmitter
         'text_equals',
         'text_contains',
         'attribute_equals',
+        'attribute_exists',
         'class_present',
     );
 
@@ -291,6 +294,7 @@ class UdemyTestEmitter
             case 'text_equals':
             case 'text_contains':
             case 'attribute_equals':
+            case 'attribute_exists':
             case 'class_present':
             case 'computed_style_equals':
             case 'computed_styles_equals':
@@ -445,6 +449,21 @@ class UdemyTestEmitter
                     'expect(el).not.toBeNull();',
                     'expect(el.getAttribute(' . self::jsString($attr) . ')).toBe('
                         . self::jsString((string) $test['expected']) . ');',
+                );
+
+            case 'attribute_exists':
+                $attr = isset($test['attribute']) ? (string) $test['attribute'] : '';
+                if ($attr === '') {
+                    $error = array(
+                        'code' => 'MISSING_ATTRIBUTE',
+                        'message' => 'Test "' . $test['id'] . '" requires attribute.',
+                    );
+                    return array();
+                }
+                return array(
+                    'var el = document.querySelector(' . $sel . ');',
+                    'expect(el).not.toBeNull();',
+                    'expect(el.hasAttribute(' . self::jsString($attr) . ')).toBe(true);',
                 );
 
             case 'class_present':

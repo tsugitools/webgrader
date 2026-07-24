@@ -30,6 +30,8 @@ function webgrader_asset_bust() {
         __DIR__ . '/js/tests.js',
         __DIR__ . '/js/validation.js',
         __DIR__ . '/js/html-validate.js',
+        __DIR__ . '/js/css-validate.js',
+        __DIR__ . '/js/axe-validate.js',
         __DIR__ . '/js/console-capture.js',
         __DIR__ . '/css/webgrader.css',
     );

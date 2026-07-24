@@ -15,6 +15,7 @@ class UdemyLocalValidator
         'text_equals',
         'text_contains',
         'attribute_equals',
+        'attribute_exists',
         'class_present',
     );
 
@@ -274,6 +275,23 @@ class UdemyLocalValidator
                 return array(
                     'pass' => $actual === $expected,
                     'detail' => 'Got "' . $actual . '", expected "' . $expected . '"',
+                );
+
+            case 'attribute_exists':
+                if ($nodes->length === 0) {
+                    return array('pass' => false, 'detail' => 'No match for ' . $selector);
+                }
+                $el = $nodes->item(0);
+                if (!($el instanceof DOMElement)) {
+                    return array('pass' => false, 'detail' => 'Match is not an element');
+                }
+                $attr = (string) $test['attribute'];
+                $ok = $el->hasAttribute($attr);
+                return array(
+                    'pass' => $ok,
+                    'detail' => $ok
+                        ? 'Attribute ' . $attr . ' is present'
+                        : 'Attribute ' . $attr . ' is missing',
                 );
 
             case 'class_present':
@@ -640,12 +658,18 @@ JS;
                 continue;
             }
             if ($rest[0] === '[') {
-                if (!preg_match('/^\[([a-zA-Z_:][a-zA-Z0-9_:\-]*)=(["\'])(.*?)\2\](.*)$/', $rest, $m)) {
-                    return null;
+                if (preg_match('/^\[([a-zA-Z_:][a-zA-Z0-9_:\-]*)=(["\'])(.*?)\2\](.*)$/', $rest, $m)) {
+                    $predicates[] = '@' . $m[1] . '="' . self::xpathLiteral($m[3]) . '"';
+                    $rest = $m[4];
+                    continue;
                 }
-                $predicates[] = '@' . $m[1] . '="' . self::xpathLiteral($m[3]) . '"';
-                $rest = $m[4];
-                continue;
+                // Attribute presence: [for], [alt], etc.
+                if (preg_match('/^\[([a-zA-Z_:][a-zA-Z0-9_:\-]*)\](.*)$/', $rest, $m)) {
+                    $predicates[] = '@' . $m[1];
+                    $rest = $m[2];
+                    continue;
+                }
+                return null;
             }
             return null;
         }
