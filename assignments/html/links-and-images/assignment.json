@@ -2,9 +2,9 @@
   "type": "webgrader",
   "schema_version": 1,
   "id": "html-links-and-images-001",
-  "assignment_version": 4,
+  "assignment_version": 5,
   "title": "Links and Images",
-  "prompt": "<p>Build a small page with a link and <strong>two</strong> images so you can see how <code>alt</code> text works.</p><ul><li>Add a link (<code>&lt;a&gt;</code>) whose <code>href</code> is <code>https://www.dj4e.com/</code> and whose visible text is <strong>DJ4E</strong>.</li><li>Add a working image with <code>src=\"cat-v1.png\"</code> and <code>alt</code> of <strong>A friendly cat</strong>. This file is provided with the assignment and should display in the preview.</li><li>Add a second image with <code>src=\"missing-cat.jpg\"</code> and <code>alt</code> of <strong>Cat photo unavailable</strong>. That file does not exist — after you Run, you should see the alt text in the preview (and a failed-load message in the Console).</li></ul>",
+  "prompt": "<p>Build a small page with a link and <strong>two</strong> images so you can see how <code>alt</code> text works.</p><ul><li>Add a link (<code>&lt;a&gt;</code>) whose <code>href</code> is <code>https://www.w3.org/</code> and whose visible text is <strong>W3C</strong>.</li><li>Add a working image with <code>src=\"cat-v1.png\"</code> and <code>alt</code> of <strong>A friendly cat</strong>. This file is provided with the assignment and should display in the preview.</li><li>Add a second image with <code>src=\"missing-cat.jpg\"</code> and <code>alt</code> of <strong>Cat photo unavailable</strong>. That file does not exist — after you Run, you should see the alt text in the preview (and a failed-load message in the Console).</li></ul>",
   "files": {
     "html": {
       "mode": "editable",
@@ -43,22 +43,22 @@
     },
     {
       "id": "link-href",
-      "name": "Link points to DJ4E",
+      "name": "Link points to W3C",
       "type": "attribute_equals",
       "selector": "a",
       "attribute": "href",
-      "expected": "https://www.dj4e.com/",
+      "expected": "https://www.w3.org/",
       "points": 2,
-      "feedback": "Set the link href to https://www.dj4e.com/"
+      "feedback": "Set the link href to https://www.w3.org/"
     },
     {
       "id": "link-text",
-      "name": "Link text is DJ4E",
+      "name": "Link text is W3C",
       "type": "text_equals",
       "selector": "a",
-      "expected": "DJ4E",
+      "expected": "W3C",
       "points": 1,
-      "feedback": "The visible link text should be DJ4E."
+      "feedback": "The visible link text should be W3C."
     },
     {
       "id": "two-images",
@@ -111,6 +111,6 @@
     "partial_credit": true
   },
   "solution": {
-    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Links and Images</title>\n</head>\n<body>\n  <p><a href=\"https://www.dj4e.com/\">DJ4E</a></p>\n  <p>\n    <img src=\"cat-v1.png\" alt=\"A friendly cat\">\n  </p>\n  <p>\n    <img src=\"missing-cat.jpg\" alt=\"Cat photo unavailable\">\n  </p>\n</body>\n</html>\n"
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Links and Images</title>\n</head>\n<body>\n  <p><a href=\"https://www.w3.org/\">W3C</a></p>\n  <p>\n    <img src=\"cat-v1.png\" alt=\"A friendly cat\">\n  </p>\n  <p>\n    <img src=\"missing-cat.jpg\" alt=\"Cat photo unavailable\">\n  </p>\n</body>\n</html>\n"
   }
 }

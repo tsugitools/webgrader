@@ -177,17 +177,10 @@
 
             if (test.type === 'html_validate') {
                 if (!HV || !HV.validateHtmlSource) {
-                    configError = 'html_validate support is not loaded.';
-                    results.push({
-                        id: test.id,
-                        name: test.name || test.id,
-                        pass: false,
-                        points: points,
-                        earned: 0,
-                        kind: 'config',
-                        detail: configError,
-                        feedback: ''
-                    });
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'HTML validator unavailable — credited automatically.'
+                    }, 'pass');
                     return runNext();
                 }
                 var source = options.htmlSource;
@@ -195,19 +188,18 @@
                     source = '';
                 }
                 return HV.validateHtmlSource(source, test).then(function (outcome) {
-                    earned += pushResult(results, test, points, outcome, 'fail');
+                    if (outcome && outcome.bypass) {
+                        earned += pushResult(results, test, points, outcome, 'pass');
+                    } else {
+                        earned += pushResult(results, test, points, outcome, 'fail');
+                    }
                 }).catch(function (err) {
-                    graderError = (err && err.message) ? err.message : String(err);
-                    results.push({
-                        id: test.id,
-                        name: test.name || test.id,
-                        pass: false,
-                        points: points,
-                        earned: 0,
-                        kind: 'grader',
-                        detail: 'HTML validator failed to run: ' + graderError,
-                        feedback: ''
-                    });
+                    // CDN / library failure — do not penalize the student.
+                    var reason = (err && err.message) ? err.message : String(err);
+                    earned += pushResult(results, test, points, {
+                        pass: true,
+                        detail: 'HTML validator unavailable — credited automatically. (' + reason + ')'
+                    }, 'pass');
                 }).then(runNext);
             }
 

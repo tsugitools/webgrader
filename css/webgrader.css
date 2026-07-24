@@ -359,18 +359,6 @@ textarea.code {
     font-size: 0.9rem;
 }
 
-.author-footer {
-    margin: 1.5rem 0 2rem;
-    padding: 1rem 1.25rem;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-}
-
-.author-footer .muted {
-    margin: 0 0 0.75rem;
-}
-
 .console-list {
     min-height: 120px;
     max-height: 220px;

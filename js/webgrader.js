@@ -805,6 +805,12 @@
         var btnSave = el('button', {
             type: 'button', className: 'btn btn-primary', text: 'Save'
         });
+        var btnSaveLearner = el('button', {
+            type: 'button',
+            className: 'btn btn-secondary',
+            id: 'btnSaveAndLearner',
+            text: 'Save and Switch to Learner view'
+        });
         var btnPreview = el('button', {
             type: 'button', className: 'btn btn-secondary', text: 'Run starter preview'
         });
@@ -816,6 +822,7 @@
         });
         statusEl = el('span', { className: 'status status-pending' });
         actions.appendChild(btnSave);
+        actions.appendChild(btnSaveLearner);
         actions.appendChild(btnPreview);
         actions.appendChild(btnView);
         actions.appendChild(btnImport);
@@ -841,31 +848,7 @@
         app.appendChild(consoleWrap);
         if (Console && Console.bind) Console.bind(consoleWrap);
 
-        var footer = el('section', { className: 'author-footer' });
-        footer.appendChild(el('p', {
-            className: 'muted',
-            text: 'Save changes, or save and open the student experience.'
-        }));
-        var footerRow = el('div', { className: 'btn-row' });
-        var btnFooterSave = el('button', {
-            type: 'button',
-            className: 'btn btn-secondary',
-            id: 'btnFooterSave',
-            text: 'Save'
-        });
-        var btnSaveLearner = el('button', {
-            type: 'button',
-            className: 'btn btn-primary',
-            id: 'btnSaveAndLearner',
-            text: 'Save and Switch to Learner view'
-        });
-        footerRow.appendChild(btnFooterSave);
-        footerRow.appendChild(btnSaveLearner);
-        footer.appendChild(footerRow);
-        app.appendChild(footer);
-
         btnSave.addEventListener('click', authorSave);
-        btnFooterSave.addEventListener('click', authorSave);
         btnSaveLearner.addEventListener('click', authorSaveAndLearner);
         btnPreview.addEventListener('click', authorRunPreview);
         btnView.addEventListener('click', authorViewJson);

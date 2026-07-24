@@ -13,7 +13,7 @@ $assignments = array(
     'HeadingsAndParagraphs' => 'HTML: Headings and Paragraphs',
     'LinksAndImages' => 'HTML: Links and Images',
     'SimpleList' => 'HTML: A Simple List',
-    'Dj4eValidatedPage' => 'HTML: DJ4E Validated Page',
+    'ValidatedHtmlPage' => 'HTML: Validated HTML Page',
 );
 
 /**
@@ -24,7 +24,7 @@ function webgrader_builtin_relpath($key) {
         'HeadingsAndParagraphs' => 'assignments/html/headings-and-paragraphs',
         'LinksAndImages' => 'assignments/html/links-and-images',
         'SimpleList' => 'assignments/html/simple-list',
-        'Dj4eValidatedPage' => 'assignments/html/dj4e-validated-page',
+        'ValidatedHtmlPage' => 'assignments/html/validated-html-page',
     );
     return isset($map[$key]) ? $map[$key] : null;
 }

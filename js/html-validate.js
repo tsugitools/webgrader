@@ -110,6 +110,15 @@
                     messages: messages
                 };
             });
+        }).catch(function (err) {
+            // Library/CDN/config failure — caller treats bypass as free credit.
+            var reason = (err && err.message) ? err.message : String(err);
+            return {
+                pass: true,
+                bypass: true,
+                detail: 'HTML validator unavailable — credited automatically. (' + reason + ')',
+                messages: []
+            };
         });
     }
 

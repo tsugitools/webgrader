@@ -44,7 +44,7 @@ LTI custom parameter (optional):
 { "key": "exercise", "value": "HeadingsAndParagraphs" }
 ```
 
-Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `Dj4eValidatedPage`.
+Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`.
 
 ## Learner workflow
 
@@ -69,7 +69,11 @@ Assignments may include a test with `"type": "html_validate"`. That loads [html-
 }
 ```
 
+Omit the test entirely for assignments that should not grade markup validity. This is not the W3C Nu checker; it is a strict offline HTML5 validator suitable for intro courses.
+
 `html-validate:standard` follows HTML5 optional end tags (a missing `</p>` can still be “valid”). Prefer **`html-validate:recommended`**, which includes `no-implicit-close` and catches that common learner mistake.
+
+If the CDN/library fails to load or run, that test is **credited automatically** (same idea as a soft bypass when an external validator is down). Student HTML errors still fail normally.
 
 ## Locked Phase 1 decisions
 
