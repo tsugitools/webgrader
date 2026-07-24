@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WebGrader Help</title>
+  <link rel="stylesheet" href="css/webgrader.css">
+  <style>
+    .doc { max-width: 720px; margin: 2rem auto; padding: 0 1.25rem 3rem; line-height: 1.55; }
+    .doc h1 { font-size: 1.6rem; }
+    .doc h2 { font-size: 1.15rem; margin-top: 1.75rem; }
+  </style>
+</head>
+<body>
+  <div class="doc">
+    <h1>WebGrader Help</h1>
+    <p>WebGrader is an interactive browser autograder for introductory HTML (and later CSS and JavaScript).</p>
+
+    <h2>Learner workflow</h2>
+    <ol>
+      <li>Read the assignment prompt.</li>
+      <li>Edit the source in the editor tabs.</li>
+      <li>Press <strong>Run / Restart</strong> to load your page in the preview.</li>
+      <li>Interact with the preview if the assignment asks you to.</li>
+      <li>Press <strong>Grade</strong> to check your work and send a score.</li>
+    </ol>
+    <p>If you edit source after Running, <strong>Grade</strong> stays disabled until you Run again so the grader always sees the code you last previewed.</p>
+    <p>The <strong>Console</strong> panel shows <code>console.log</code> / warn / error output, uncaught JavaScript errors, and failed resource loads (<code>&lt;img&gt;</code>, scripts, etc.) from the preview. It clears on each Run / Restart. Messages from the surrounding Tsugi page or the browser Network panel are not mirrored here.</p>
+    <p>Some assignments also check that your HTML source validates (optional <code>html_validate</code> test). Fix any reported markup issues and Grade again.</p>
+
+    <h2>Instructors</h2>
+    <p>If the assignment includes a reference solution, instructors see a <strong>Load solution</strong> button in Learner view. It fills the editors with the solution so you can Run and Grade it. Re-select the built-in from Settings (or use Import JSON) if an older placement copy is missing the <code>solution</code> field.</p>
+
+    <h2>Reset and autosave</h2>
+    <p>Your source is autosaved for this placement. Use <strong>Reset to starter</strong> to discard your work and restore the assignment starter code.</p>
+
+    <h2>Security note</h2>
+    <p>Student pages run in a same-origin iframe so the grader can inspect the DOM. This is an educational environment, not a hostile-code sandbox. Infinite loops in student JavaScript can freeze the browser tab; use Run / Restart to rebuild the preview after fixing the code.</p>
+  </div>
+</body>
+</html>

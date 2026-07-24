@@ -1,0 +1,154 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "html-dj4e-validated-page-001",
+  "assignment_version": 3,
+  "title": "DJ4E Validated HTML Page",
+  "prompt": "<p>Build a well-formed HTML5 page. There is a lot of flexibility in the content — the structure and tags matter.</p><ul><li>Use a complete HTML5 document with <code>lang=\"en\"</code> and a UTF-8 character set via <code>&lt;meta charset=\"UTF-8\"&gt;</code>.</li><li>The <code>&lt;title&gt;</code> must contain the text <strong>DJ4E HTML</strong>.</li><li>Include at least one <code>&lt;p&gt;</code>, one <code>&lt;h1&gt;</code>, and one <code>&lt;ul&gt;</code>.</li><li>Include <strong>exactly three</strong> <code>&lt;a&gt;</code> tags and <strong>exactly three</strong> <code>&lt;li&gt;</code> tags.</li><li>Each link must open in a new tab: set <code>target=\"_blank\"</code> on every <code>&lt;a&gt;</code>.</li><li>Include some bold text and some italic text using the <em>correct</em> semantic tags: <code>&lt;strong&gt;</code> and <code>&lt;em&gt;</code>. Do <strong>not</strong> use <code>&lt;b&gt;</code> or <code>&lt;i&gt;</code>.</li><li>Your markup must pass the HTML validator check on Grade (checked first).</li></ul>",
+  "files": {
+    "html": {
+      "mode": "editable",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <title>Starting point</title>\n  <meta charset=\"UTF-8\">\n</head>\n<body>\n  <h1>This is just a starting point</h1>\n  <p>Construct your HTML following the instructions.</p>\n  <p>When you have finished your HTML <em>and</em> it passes the validator, press Grade.</p>\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "hidden",
+      "starter": ""
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "html-valid",
+      "name": "HTML validates",
+      "type": "html_validate",
+      "preset": "html-validate:recommended",
+      "points": 2,
+      "feedback": "Fix HTML validation errors so the page is well-formed."
+    },
+    {
+      "id": "has-charset",
+      "name": "Declares UTF-8 charset",
+      "type": "selector_exists",
+      "selector": "meta[charset=\"UTF-8\"]",
+      "points": 1,
+      "feedback": "Add <meta charset=\"UTF-8\"> in the head."
+    },
+    {
+      "id": "html-lang",
+      "name": "html lang is en",
+      "type": "attribute_equals",
+      "selector": "html",
+      "attribute": "lang",
+      "expected": "en",
+      "points": 1,
+      "feedback": "Set lang=\"en\" on the <html> element."
+    },
+    {
+      "id": "title-dj4e",
+      "name": "Title contains DJ4E HTML",
+      "type": "text_contains",
+      "selector": "title",
+      "expected": "DJ4E HTML",
+      "points": 2,
+      "feedback": "Put the text DJ4E HTML in the <title>."
+    },
+    {
+      "id": "has-h1",
+      "name": "Has an h1",
+      "type": "selector_exists",
+      "selector": "h1",
+      "points": 1,
+      "feedback": "Add at least one <h1>."
+    },
+    {
+      "id": "has-p",
+      "name": "Has a paragraph",
+      "type": "selector_exists",
+      "selector": "p",
+      "points": 1,
+      "feedback": "Add at least one <p>."
+    },
+    {
+      "id": "has-ul",
+      "name": "Has an unordered list",
+      "type": "selector_exists",
+      "selector": "ul",
+      "points": 1,
+      "feedback": "Add at least one <ul>."
+    },
+    {
+      "id": "three-anchors",
+      "name": "Has three links",
+      "type": "selector_count",
+      "selector": "a",
+      "expected": 3,
+      "points": 1,
+      "feedback": "Include exactly three <a> elements."
+    },
+    {
+      "id": "anchors-blank",
+      "name": "All links use target=_blank",
+      "type": "selector_count",
+      "selector": "a[target=\"_blank\"]",
+      "expected": 3,
+      "points": 1,
+      "feedback": "Add target=\"_blank\" to each of your three <a> tags."
+    },
+    {
+      "id": "three-list-items",
+      "name": "Has three list items",
+      "type": "selector_count",
+      "selector": "li",
+      "expected": 3,
+      "points": 2,
+      "feedback": "Include exactly three <li> elements."
+    },
+    {
+      "id": "has-strong",
+      "name": "Uses strong for bold",
+      "type": "selector_exists",
+      "selector": "strong",
+      "points": 1,
+      "feedback": "Use <strong> for bold text (not <b>)."
+    },
+    {
+      "id": "has-em",
+      "name": "Uses em for italics",
+      "type": "selector_exists",
+      "selector": "em",
+      "points": 1,
+      "feedback": "Use <em> for italic text (not <i>)."
+    },
+    {
+      "id": "no-b",
+      "name": "Does not use b",
+      "type": "selector_not_exists",
+      "selector": "b",
+      "points": 1,
+      "feedback": "Remove <b> tags; use <strong> instead."
+    },
+    {
+      "id": "no-i",
+      "name": "Does not use i",
+      "type": "selector_not_exists",
+      "selector": "i",
+      "points": 1,
+      "feedback": "Remove <i> tags; use <em> instead."
+    }
+  ],
+  "grading": {
+    "maximum_points": 17,
+    "partial_credit": true
+  },
+  "solution": {
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <title>DJ4E HTML — Sample Page</title>\n  <meta charset=\"UTF-8\">\n</head>\n<body>\n  <h1>Welcome to my DJ4E page</h1>\n  <p>This page practices semantic HTML with <strong>bold</strong> and <em>italic</em> text.</p>\n  <ul>\n    <li><a href=\"https://www.dj4e.com/\" target=\"_blank\">DJ4E</a></li>\n    <li><a href=\"https://www.w3.org/\" target=\"_blank\">W3C</a></li>\n    <li><a href=\"https://developer.mozilla.org/\" target=\"_blank\">MDN</a></li>\n  </ul>\n  <p>When the HTML validates, you are ready to Grade.</p>\n</body>\n</html>\n"
+  }
+}

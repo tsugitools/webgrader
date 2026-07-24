@@ -1,0 +1,87 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "html-headings-and-paragraphs-001",
+  "assignment_version": 3,
+  "title": "Headings and Paragraphs",
+  "prompt": "<p>Create a short page about your favorite place.</p><ul><li>Use an <code>&lt;h1&gt;</code> with the text <strong>My Favorite Place</strong>.</li><li>Add a paragraph (<code>&lt;p&gt;</code>) that contains the word <strong>because</strong>.</li><li>Add a second-level heading (<code>&lt;h2&gt;</code>) with the text <strong>Details</strong>.</li></ul>",
+  "files": {
+    "html": {
+      "mode": "editable",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>My Favorite Place</title>\n</head>\n<body>\n  <!-- Add your headings and paragraph here -->\n\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "hidden",
+      "starter": ""
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "has-h1",
+      "name": "Has an h1 heading",
+      "type": "selector_exists",
+      "selector": "h1",
+      "points": 2,
+      "feedback": "Add an <h1> element."
+    },
+    {
+      "id": "h1-text",
+      "name": "h1 says My Favorite Place",
+      "type": "text_equals",
+      "selector": "h1",
+      "expected": "My Favorite Place",
+      "points": 2,
+      "feedback": "The h1 text should be exactly \"My Favorite Place\"."
+    },
+    {
+      "id": "has-p",
+      "name": "Has a paragraph",
+      "type": "selector_exists",
+      "selector": "p",
+      "points": 2,
+      "feedback": "Add at least one <p> element."
+    },
+    {
+      "id": "p-because",
+      "name": "Paragraph mentions because",
+      "type": "text_contains",
+      "selector": "p",
+      "expected": "because",
+      "points": 2,
+      "feedback": "Your paragraph should include the word \"because\"."
+    },
+    {
+      "id": "has-h2",
+      "name": "Has an h2 Details heading",
+      "type": "text_equals",
+      "selector": "h2",
+      "expected": "Details",
+      "points": 1,
+      "feedback": "Add an <h2> whose text is \"Details\"."
+    },
+    {
+      "id": "html-valid",
+      "name": "HTML validates",
+      "type": "html_validate",
+      "preset": "html-validate:recommended",
+      "points": 1,
+      "feedback": "Fix the HTML validation errors shown in the test details (for example, close your tags)."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>My Favorite Place</title>\n</head>\n<body>\n  <h1>My Favorite Place</h1>\n  <p>I like the library because it is quiet and full of books.</p>\n  <h2>Details</h2>\n</body>\n</html>\n"
+  }
+}

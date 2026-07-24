@@ -1,0 +1,116 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "html-links-and-images-001",
+  "assignment_version": 4,
+  "title": "Links and Images",
+  "prompt": "<p>Build a small page with a link and <strong>two</strong> images so you can see how <code>alt</code> text works.</p><ul><li>Add a link (<code>&lt;a&gt;</code>) whose <code>href</code> is <code>https://www.dj4e.com/</code> and whose visible text is <strong>DJ4E</strong>.</li><li>Add a working image with <code>src=\"cat-v1.png\"</code> and <code>alt</code> of <strong>A friendly cat</strong>. This file is provided with the assignment and should display in the preview.</li><li>Add a second image with <code>src=\"missing-cat.jpg\"</code> and <code>alt</code> of <strong>Cat photo unavailable</strong>. That file does not exist — after you Run, you should see the alt text in the preview (and a failed-load message in the Console).</li></ul>",
+  "files": {
+    "html": {
+      "mode": "editable",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Links and Images</title>\n</head>\n<body>\n  <!-- Add your link and two images here -->\n\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "hidden",
+      "starter": ""
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run",
+    "base_href": "assignments/html/links-and-images/assets/"
+  },
+  "assets": [
+    {
+      "id": "cat-image",
+      "path": "assignments/html/links-and-images/assets/cat-v1.png",
+      "type": "image",
+      "required": true
+    }
+  ],
+  "tests": [
+    {
+      "id": "has-link",
+      "name": "Has an anchor element",
+      "type": "selector_exists",
+      "selector": "a",
+      "points": 1,
+      "feedback": "Add an <a> element."
+    },
+    {
+      "id": "link-href",
+      "name": "Link points to DJ4E",
+      "type": "attribute_equals",
+      "selector": "a",
+      "attribute": "href",
+      "expected": "https://www.dj4e.com/",
+      "points": 2,
+      "feedback": "Set the link href to https://www.dj4e.com/"
+    },
+    {
+      "id": "link-text",
+      "name": "Link text is DJ4E",
+      "type": "text_equals",
+      "selector": "a",
+      "expected": "DJ4E",
+      "points": 1,
+      "feedback": "The visible link text should be DJ4E."
+    },
+    {
+      "id": "two-images",
+      "name": "Has two images",
+      "type": "selector_count",
+      "selector": "img",
+      "expected": 2,
+      "points": 2,
+      "feedback": "Add exactly two <img> elements (one that loads, one that does not)."
+    },
+    {
+      "id": "working-src",
+      "name": "Working image uses cat-v1.png",
+      "type": "selector_exists",
+      "selector": "img[src=\"cat-v1.png\"]",
+      "points": 1,
+      "feedback": "Add an image with src=\"cat-v1.png\"."
+    },
+    {
+      "id": "working-alt",
+      "name": "Working image has alt text",
+      "type": "attribute_equals",
+      "selector": "img[src=\"cat-v1.png\"]",
+      "attribute": "alt",
+      "expected": "A friendly cat",
+      "points": 1,
+      "feedback": "Set alt=\"A friendly cat\" on the cat-v1.png image."
+    },
+    {
+      "id": "missing-src",
+      "name": "Missing image points at a non-existent file",
+      "type": "selector_exists",
+      "selector": "img[src=\"missing-cat.jpg\"]",
+      "points": 1,
+      "feedback": "Add an image with src=\"missing-cat.jpg\"."
+    },
+    {
+      "id": "missing-alt",
+      "name": "Missing image has fallback alt text",
+      "type": "attribute_equals",
+      "selector": "img[src=\"missing-cat.jpg\"]",
+      "attribute": "alt",
+      "expected": "Cat photo unavailable",
+      "points": 1,
+      "feedback": "Set alt=\"Cat photo unavailable\" on the missing-cat.jpg image."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Links and Images</title>\n</head>\n<body>\n  <p><a href=\"https://www.dj4e.com/\">DJ4E</a></p>\n  <p>\n    <img src=\"cat-v1.png\" alt=\"A friendly cat\">\n  </p>\n  <p>\n    <img src=\"missing-cat.jpg\" alt=\"Cat photo unavailable\">\n  </p>\n</body>\n</html>\n"
+  }
+}

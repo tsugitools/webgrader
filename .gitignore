@@ -1,0 +1,39 @@
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# Editors / IDE
+*.swp
+*.swo
+*~
+*.bak
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Logs and local junk
+*.log
+*.tmp
+*.temp
+.cache/
+
+# PHP / tooling (if added later)
+.phpunit.result.cache
+.phpunit.cache/
+vendor/
+composer.lock
+
+# Local / generated
+old/
+output/
+test/
+node_modules/
+package-lock.json
+package.json
+

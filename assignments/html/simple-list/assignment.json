@@ -1,0 +1,70 @@
+{
+  "type": "webgrader",
+  "schema_version": 1,
+  "id": "html-simple-list-001",
+  "assignment_version": 1,
+  "title": "A Simple List",
+  "prompt": "<p>Create an unordered list of three favorite foods.</p><ul><li>Use a <code>&lt;ul&gt;</code> containing exactly <strong>three</strong> <code>&lt;li&gt;</code> items.</li><li>The first item text must be <strong>Apples</strong>.</li><li>Do not include an ordered list (<code>&lt;ol&gt;</code>) on the page.</li></ul>",
+  "files": {
+    "html": {
+      "mode": "editable",
+      "starter": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Favorite Foods</title>\n</head>\n<body>\n  <h1>Favorite Foods</h1>\n  <!-- Add your unordered list here -->\n\n</body>\n</html>\n"
+    },
+    "css": {
+      "mode": "hidden",
+      "starter": ""
+    },
+    "javascript": {
+      "mode": "hidden",
+      "starter": ""
+    }
+  },
+  "runtime": {
+    "preview": true,
+    "storage": "reset_on_run"
+  },
+  "assets": [],
+  "tests": [
+    {
+      "id": "has-ul",
+      "name": "Has an unordered list",
+      "type": "selector_exists",
+      "selector": "ul",
+      "points": 2,
+      "feedback": "Add a <ul> element."
+    },
+    {
+      "id": "three-items",
+      "name": "List has three items",
+      "type": "selector_count",
+      "selector": "ul li",
+      "expected": 3,
+      "points": 4,
+      "feedback": "Put exactly three <li> elements inside the <ul>."
+    },
+    {
+      "id": "first-apples",
+      "name": "First item is Apples",
+      "type": "text_equals",
+      "selector": "ul li:first-child",
+      "expected": "Apples",
+      "points": 3,
+      "feedback": "The first list item should say Apples."
+    },
+    {
+      "id": "no-ol",
+      "name": "No ordered list",
+      "type": "selector_not_exists",
+      "selector": "ol",
+      "points": 1,
+      "feedback": "Do not include an <ol> on this page."
+    }
+  ],
+  "grading": {
+    "maximum_points": 10,
+    "partial_credit": true
+  },
+  "solution": {
+    "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Favorite Foods</title>\n</head>\n<body>\n  <h1>Favorite Foods</h1>\n  <ul>\n    <li>Apples</li>\n    <li>Bread</li>\n    <li>Cheese</li>\n  </ul>\n</body>\n</html>\n"
+  }
+}
