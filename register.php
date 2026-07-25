@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/assignments.php';
+
 $REGISTER_LTI2 = array(
     "name" => "WebGrader",
     "FontAwesome" => "fa-code",
@@ -14,5 +16,11 @@ $REGISTER_LTI2 = array(
     ),
     "source_url" => "https://github.com/tsugitools/webgrader",
     "placements" => array(
+    ),
+    // Optional: mstore install shows a dropdown per key; selected values become LTI custom.
+    // Use the function (not $assignments): register.php is require()'d inside a
+    // function, so require_once may skip redefining the $assignments variable.
+    "custom" => array(
+        "exercise" => webgrader_assignment_catalog(),
     ),
 );

@@ -9,20 +9,29 @@
  * Each key maps to a directory under assignments/ containing assignment.json.
  */
 
-$assignments = array(
-    'HeadingsAndParagraphs' => 'HTML: Headings and Paragraphs',
-    'LinksAndImages' => 'HTML: Links and Images',
-    'SimpleList' => 'HTML: A Simple List',
-    'ValidatedHtmlPage' => 'HTML: Validated HTML Page',
-    'ColoringParagraphs' => 'CSS: Coloring Paragraphs',
-    'FourCorners' => 'CSS: Four Corners',
-    'PuttingTheCascade' => 'CSS: Putting the Cascade in CSS',
-    'HighlightingWithSpan' => 'CSS: Highlighting with Span',
-    'LinkStates' => 'CSS: Link States',
-    'FixAccessibility' => 'A11Y: Fix Accessibility',
-    'HelloWorld' => 'JavaScript: Hello World',
-    'AddTwoAndSquare' => 'JavaScript: Add Two and Square',
-);
+/**
+ * Catalog of built-in exercises: key => label.
+ * Prefer this over $assignments from register.php — register is loaded inside
+ * a function, so a require_once of this file may not define $assignments there.
+ */
+function webgrader_assignment_catalog() {
+    return array(
+        'HeadingsAndParagraphs' => 'HTML: Headings and Paragraphs',
+        'LinksAndImages' => 'HTML: Links and Images',
+        'SimpleList' => 'HTML: A Simple List',
+        'ValidatedHtmlPage' => 'HTML: Validated HTML Page',
+        'ColoringParagraphs' => 'CSS: Coloring Paragraphs',
+        'FourCorners' => 'CSS: Four Corners',
+        'PuttingTheCascade' => 'CSS: Putting the Cascade in CSS',
+        'HighlightingWithSpan' => 'CSS: Highlighting with Span',
+        'LinkStates' => 'CSS: Link States',
+        'FixAccessibility' => 'A11Y: Fix Accessibility',
+        'HelloWorld' => 'JavaScript: Hello World',
+        'AddTwoAndSquare' => 'JavaScript: Add Two and Square',
+    );
+}
+
+$assignments = webgrader_assignment_catalog();
 
 /**
  * Relative path under this tool to an assignment directory, or null.
@@ -49,7 +58,7 @@ function webgrader_builtin_relpath($key) {
  * Load a built-in assignment by catalog key, or null.
  */
 function webgrader_builtin_exercise($key) {
-    global $assignments;
+    $assignments = webgrader_assignment_catalog();
     if (!$key || !is_string($key) || !isset($assignments[$key])) {
         return null;
     }
