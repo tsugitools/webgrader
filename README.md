@@ -1,39 +1,18 @@
 # WebGrader
 
-Tsugi-based browser autograder for introductory HTML, CSS, and JavaScript.
+Tsugi-based browser autograder for introductory HTML, CSS, JavaScript, and accessibility.
 
-Learners edit source, press **Run / Restart** to preview in an iframe, optionally interact with the page, then press **Grade**. Scores use existing Tsugi attempt recording and LTI grade passback. Assignments are one JSON object stored in `lti_link.json`.
+Learners edit source, press **Run / Restart** to preview in an iframe, optionally interact with the page, then press **Grade**. Scores use existing Tsugi attempt recording and LTI grade passback. Each placement stores one assignment JSON object in `lti_link.json`.
 
-## Status
+## What it does
 
-Phase 0–1 implemented:
-
-- Thin PHP shell mirroring DBGrader (`window.WEBGRADER` bootstrap)
-- Learner edit → Run → Grade loop with dirty-state protection
-- Declarative DOM tests, `computed_style_equals`, optional HTML/CSS validators, optional `axe_validate` accessibility checks, and partial credit
+- Edit → Run → Grade loop with dirty-state protection (Grade only after the current source has been Run)
+- Declarative DOM and CSS tests, optional HTML/CSS validators, optional axe-core accessibility checks
+- Partial credit (`earned / maximum`)
 - Student source autosave (`student-save.php` + localStorage backup)
-- Built-in HTML, CSS, and JavaScript assignments under `assignments/`
-
-Later phases (mock `fetch`, rich authoring) are described in [DESIGN.md](DESIGN.md).
-
-Udemy export (Phase 1–2 + Phase 4 authoring UI) is described in [UDEMY_EXPORT.md](UDEMY_EXPORT.md). Live Udemy verification (2026-07-24): HTML `simple-list`, CSS `coloring-paragraphs`, and JS `add-two-and-square`. In Edit mode, use **Export to Udemy**. See [docs/udemy-observations.md](docs/udemy-observations.md).
-
-## Tool layout
-
-```text
-webgrader/
-  index.php, register.php, tsugi.php
-  save.php              # instructor assignment JSON → lti_link.json
-  student-save.php      # learner source → lti_result.json
-  exercise.php, assignments.php
-  grades.php, grade-detail.php
-  js/                   # validation, runtime, tests, UI
-  css/webgrader.css
-  assignments/html/…/assignment.json
-  assignments/css/…/assignment.json
-  assignments/a11y/…/assignment.json
-  assignments/javascript/…/assignment.json
-```
+- Built-in assignment catalog under `assignments/` (HTML, CSS, A11Y, JavaScript)
+- Instructor **Edit** mode for title, instructions, starters, solutions, and JSON import/export
+- **Export to Udemy** for compatible exercises (starter / solution / Jasmine ZIP)
 
 ## Instructor setup
 
@@ -43,13 +22,44 @@ webgrader/
 4. In **Learner** view, use **Load solution** (instructor only) when a reference `solution` is present.
 5. Use **Student Data** for grades.
 
-LTI custom parameter (optional):
+### Placing an assignment in `lessons.json`
+
+Add an LTI item that launches WebGrader and selects a built-in via the `exercise` custom parameter. On first launch, that key is copied into the placement Settings when empty.
 
 ```json
-{ "key": "exercise", "value": "HeadingsAndParagraphs" }
+{
+    "type": "lti",
+    "title": "Auto-grader: Headings and Paragraphs",
+    "launch": "{apphome}/mod/webgrader/",
+    "resource_link_id": "dj4e_webgrader_headings",
+    "target": "_blank",
+    "custom": [
+        { "key": "exercise", "value": "HeadingsAndParagraphs" }
+    ]
+}
 ```
 
-Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `ValidatedHtmlPage`, `ColoringParagraphs`, `FourCorners`, `PuttingTheCascade`, `HighlightingWithSpan`, `LinkStates`, `FixAccessibility`, `HelloWorld`, `AddTwoAndSquare`.
+- **`launch`**: `{apphome}/mod/webgrader/` (or your installed tool path).
+- **`resource_link_id`**: stable unique id for this placement in the course.
+- **`target`**: optional; `"_blank"` opens in a new window (common for autograders).
+- **`custom` → `exercise`**: catalog key from the table below. Instructors can still change the assignment later under **Settings**.
+
+| `exercise` value | Settings label |
+|---|---|
+| `HeadingsAndParagraphs` | HTML: Headings and Paragraphs |
+| `LinksAndImages` | HTML: Links and Images |
+| `SimpleList` | HTML: A Simple List |
+| `ValidatedHtmlPage` | HTML: Validated HTML Page |
+| `ColoringParagraphs` | CSS: Coloring Paragraphs |
+| `FourCorners` | CSS: Four Corners |
+| `PuttingTheCascade` | CSS: Putting the Cascade in CSS |
+| `HighlightingWithSpan` | CSS: Highlighting with Span |
+| `LinkStates` | CSS: Link States |
+| `FixAccessibility` | A11Y: Fix Accessibility |
+| `HelloWorld` | JavaScript: Hello World |
+| `AddTwoAndSquare` | JavaScript: Add Two and Square |
+
+Omit `custom` / `exercise` if the instructor will pick the assignment only from Settings after install.
 
 ## Learner workflow
 
@@ -59,9 +69,13 @@ Catalog keys: `HeadingsAndParagraphs`, `LinksAndImages`, `SimpleList`, `Validate
 4. **Grade** — only enabled when source matches the last Run.
 5. Partial credit is submitted as `earned / maximum` (0–1).
 
-### Optional HTML validation
+The **Console** panel shows `console.log` / warn / error output and failed resource loads from the preview. It clears on each Run.
 
-Assignments may include a test with `"type": "html_validate"`. That loads [html-validate](https://html-validate.org/) from a pinned CDN ES module (`esm.sh`) only when needed — no `node_modules` in this tool.
+## Assignment tests
+
+Assignments declare tests in JSON. Common types include selector/text/attribute checks, computed styles, function calls, HTML/CSS validation, and accessibility checks. The grader runs `html_validate`, then `css_validate`, then `axe_validate` before other tests (results panel order matches), even if they appear later in the assignment JSON.
+
+### HTML validation
 
 ```json
 {
@@ -74,36 +88,9 @@ Assignments may include a test with `"type": "html_validate"`. That loads [html-
 }
 ```
 
-Omit the test entirely for assignments that should not grade markup validity. This is not the W3C Nu checker; it is a strict offline HTML5 validator suitable for intro courses.
+Uses [html-validate](https://html-validate.org/) from a pinned CDN when needed. Prefer **`html-validate:recommended`** over `standard` so missing end tags (for example `</p>`) are caught. If the CDN/library fails, that test is credited automatically; student markup errors still fail normally.
 
-`html-validate:standard` follows HTML5 optional end tags (a missing `</p>` can still be “valid”). Prefer **`html-validate:recommended`**, which includes `no-implicit-close` and catches that common learner mistake.
-
-If the CDN/library fails to load or run, that test is **credited automatically** (same idea as a soft bypass when an external validator is down). Student HTML errors still fail normally.
-
-### Optional accessibility checks (axe-core)
-
-Assignments may include a test with `"type": "axe_validate"`. That loads [axe-core](https://github.com/dequelabs/axe-core) from a pinned CDN script only when needed and runs it against the **live preview iframe** after Run.
-
-```json
-{
-  "id": "a11y-axe",
-  "name": "Accessibility checks pass",
-  "type": "axe_validate",
-  "runOnly": ["html-has-lang", "image-alt", "label", "button-name"],
-  "points": 4,
-  "feedback": "Fix the accessibility issues listed in the test details."
-}
-```
-
-- **`runOnly`**: array of axe rule ids (recommended for teaching) or an axe `runOnly` object.
-- **`tags`**: optional tag list (e.g. `wcag2a`) when you do not pin individual rules.
-- **`impact`**: optional minimum impact (`moderate`, `serious`, `critical`).
-
-CDN/library failure credits the test automatically, same as HTML validation. Built-in example: Settings → **A11Y: Fix Accessibility** (`FixAccessibility`).
-
-### Optional CSS validation
-
-Assignments may include a test with `"type": "css_validate"`. That loads [css-tree](https://github.com/csstree/csstree) from a pinned CDN ES module (`esm.sh`) only when needed.
+### CSS validation
 
 ```json
 {
@@ -116,14 +103,16 @@ Assignments may include a test with `"type": "css_validate"`. That loads [css-tr
 }
 ```
 
-- **`recommended`** (default): balanced braces, parse errors, and property/value checks (e.g. `colour` or `margin: 10` fail).
-- **`syntax`**: braces + parse only (skip property/value matching).
+Uses [css-tree](https://github.com/csstree/csstree) from a pinned CDN when needed.
 
-CDN/library failure credits the test automatically, same as HTML validation.
+- **`recommended`** (default): braces, parse errors, and property/value checks.
+- **`syntax`**: braces + parse only.
+
+CDN/library failure credits the test automatically.
 
 ### CSS rule checks (link pseudo-classes)
 
-`:visited` / `:hover` / `:active` cannot be graded reliably from computed style (browser privacy and no real pointer). Assignments may use `"type": "css_rule_declares"` to require a selector/property/value in the student CSS source (via css-tree).
+`:visited` / `:hover` / `:active` cannot be graded reliably from computed style. Use `"type": "css_rule_declares"` to require a selector/property/value in the student CSS source:
 
 ```json
 {
@@ -137,24 +126,32 @@ CDN/library failure credits the test automatically, same as HTML validation.
 }
 ```
 
-The grader always runs `html_validate`, then `css_validate`, then `axe_validate` before other tests (results panel order matches), even if they appear later in the assignment JSON.
+### Accessibility checks (axe-core)
 
-## Locked Phase 1 decisions
+```json
+{
+  "id": "a11y-axe",
+  "name": "Accessibility checks pass",
+  "type": "axe_validate",
+  "runOnly": ["html-has-lang", "image-alt", "label", "button-name"],
+  "points": 4,
+  "feedback": "Fix the accessibility issues listed in the test details."
+}
+```
 
-| Topic | Choice |
-|-------|--------|
-| Iframe | Same-origin, `sandbox="allow-scripts allow-same-origin allow-popups"` |
-| Max score | Explicit `grading.maximum_points`, else sum of test points |
-| Prompt | Trusted HTML |
-| Editor | Plain textareas (CodeMirror later) |
-| Autosave | `student-save.php` + localStorage backup |
-| Catalog | Directory + `assignment.json` under `assignments/` |
+Runs [axe-core](https://github.com/dequelabs/axe-core) against the live preview iframe after Run.
 
-## Udemy export (Phase 1–2 + Phase 4)
+- **`runOnly`**: axe rule ids (recommended for teaching) or an axe `runOnly` object.
+- **`tags`**: optional tag list (e.g. `wcag2a`) when you do not pin individual rules.
+- **`impact`**: optional minimum impact (`moderate`, `serious`, `critical`).
 
-In **Edit** mode, click **Export to Udemy** to preview compatibility (per-test status, warnings, repairs) and download a ZIP for manual paste into a Udemy Web Development coding exercise.
+CDN/library failure credits the test automatically. Built-in example: **A11Y: Fix Accessibility** (`FixAccessibility`).
 
-CLI (optional / CI):
+## Export to Udemy
+
+In **Edit** mode, click **Export to Udemy** to preview compatibility and download a ZIP for manual paste into a Udemy Web Development coding exercise. The package includes `starter.html`, `solution.html`, Jasmine `evaluation.js`, instructions, `manifest.json`, and `COMPATIBILITY.md`.
+
+CLI (optional):
 
 ```bash
 php scripts/export-udemy.php \
@@ -162,25 +159,16 @@ php scripts/export-udemy.php \
   --output simple-list-udemy.zip
 ```
 
-The ZIP contains `starter.html`, `solution.html`, `evaluation.js` (Jasmine), instructions, `manifest.json`, and `COMPATIBILITY.md`.
+WebGrader-only checks (`html_validate`, `css_validate`, `axe_validate`, and similar) are skipped with explicit warnings. Details: [UDEMY_EXPORT.md](UDEMY_EXPORT.md).
 
-Phase 2 adds computed-style tests, `call_function` / function checks, HTML/CSS/JS suite grouping, and soft-skips for WebGrader-only validators (`html_validate`, `css_validate`). Optional local CSS verification: `npm i jsdom` (looked up from `node_modules`).
-
-Unsupported without conversion: `css_rule_declares`, `console_includes`, assets, mock fetch. Phase 3 (assets/fetch) is deferred.
-
-Regression tests:
-
-```bash
-php tests/udemy-export/run.php
-```
-
-Observations / verification notes: [docs/udemy-observations.md](docs/udemy-observations.md).
+Design notes for contributors: [DESIGN.md](DESIGN.md).
 
 ## Security limitations
 
 - Not a secure boundary against a determined learner (same-origin preview).
-- Synchronous infinite loops in student JS can freeze the tab; documented, not “solved.”
-- Do not claim screenshot-perfect or WCAG-complete grading.
+- Synchronous infinite loops in student JavaScript can freeze the tab; use Run / Restart after fixing the code.
+- Automated accessibility checks catch common issues, not full WCAG compliance.
+- Do not claim screenshot-perfect visual grading.
 
 ## License
 

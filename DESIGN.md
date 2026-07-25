@@ -1,26 +1,12 @@
 # WebGrader Design
 
-## Status
+WebGrader is a Tsugi tool for grading introductory HTML, CSS, JavaScript, and accessibility exercises in the browser. This document describes how the program is put together: data model, runtime, tests, and boundaries.
 
-Phase 0–1 implemented (HTML edit → Run → Grade MVP). This document remains a living guide; later sections describe deferred phases.
-
-The implementation is deliberately incremental and stays close to the existing DBGrader architecture. Features that are not needed for the current working assignments remain deferred.
-
-### Locked decisions (Phase 0–1)
-
-- **Iframe:** same-origin with `sandbox="allow-scripts allow-same-origin allow-popups"` for direct DOM grading and `target="_blank"` links.
-- **Max score:** honor `grading.maximum_points` when set; otherwise sum of test `points`.
-- **Prompt:** trusted HTML.
-- **Editor:** plain textareas (CodeMirror deferred).
-- **Student autosave:** `student-save.php` → `$RESULT->setJson()`, plus localStorage backup keyed by link id.
-- **Catalog:** directory-per-assignment with `assignment.json` under `assignments/`; `assignments.php` maps Settings keys to paths.
-- **Partial credit:** Grade submits `earned / maximum` (0–1) with tool code `WEBGRADER`.
+Usage and instructor setup live in [README.md](README.md). Udemy packaging lives in [UDEMY_EXPORT.md](UDEMY_EXPORT.md).
 
 ## Overview
 
-WebGrader is an interactive browser-based autograder for HTML, CSS, and JavaScript.
-
-Each assignment is represented as one versioned JSON object stored in the existing JSON field associated with a gradable Tsugi placement (`lti_link.json`). No new assignment tables or assignment-specific database schema are required.
+Each assignment is one versioned JSON object stored in the existing Tsugi placement field (`lti_link.json`). No WebGrader-specific assignment tables are required.
 
 The learner workflow is:
 
@@ -29,392 +15,265 @@ The learner workflow is:
 3. Interact with the rendered page when the assignment requires it.
 4. Inspect preview and console output.
 5. Press **Grade**.
-6. WebGrader evaluates the current running page and records the attempt and score through existing Tsugi APIs.
 
-The central design idea is that HTML, CSS, and JavaScript are three logical source files but are assembled into one student web page running in one iframe.
+HTML, CSS, and JavaScript are three logical source files assembled into one student page in one iframe. The parent page owns the editors, console, test runner, and grade submission.
 
 ## Relationship to DBGrader
 
-WebGrader should follow DBGrader conventions wherever they make sense:
+WebGrader follows DBGrader conventions where they help:
 
 - thin PHP entry points;
-- most authoring and learner behavior implemented in JavaScript;
-- complete assignment definition stored as JSON in `lti_link.json`;
-- built-in assignment catalog under `assignments/`;
-- instructor authoring mode and learner mode;
-- exploratory Run actions separated from the graded action;
-- existing Tsugi attempt recording, grade storage, and LTI grade passback;
-- assignment JSON view/import/export;
-- simple initial authoring controls rather than a large IDE framework.
+- most authoring and learner behavior in JavaScript;
+- complete assignment definition in `lti_link.json`;
+- built-in catalog under `assignments/`;
+- instructor Edit mode vs learner mode;
+- exploratory Run separated from Grade;
+- existing Tsugi attempt recording, grade storage, and LTI passback;
+- assignment JSON view/import/export.
 
-WebGrader is a separate tool and does not need to share JavaScript internals with DBGrader. Shared Tsugi conventions and small reusable utilities are preferred over premature cross-tool abstraction.
+It is a separate tool and does not share JavaScript internals with DBGrader. Shared Tsugi conventions matter more than cross-tool abstraction.
 
 ## Goals
 
-WebGrader should:
+- Grade introductory HTML, CSS, JavaScript, and common accessibility issues in the browser.
+- Support HTML-only, CSS-only, JavaScript-only, accessibility, and combined assignments.
+- Provide immediate preview, console output, and structured grading feedback.
+- Grade observable behavior rather than forcing one implementation style.
+- Store the full assignment in the placement JSON field.
+- Reuse Tsugi attempts, grades, LTI, and student-data infrastructure.
+- Keep a curated assignment library under `assignments/` with stable asset paths.
+- Stay small enough to understand and maintain.
 
-- grade introductory HTML, CSS, and JavaScript assignments in the browser;
-- support HTML-only, CSS-only, JavaScript-only, and combined assignments;
-- provide immediate preview, console output, and grading feedback;
-- grade observable behavior rather than unnecessarily enforcing one implementation technique;
-- support browser interactions, DOM updates, events, `fetch()`, and JSON;
-- use deterministic mock network responses for normal fetch assignments;
-- store the complete assignment definition in the existing placement JSON field;
-- use existing Tsugi attempt, grade, LTI, and student-data infrastructure;
-- provide a curated assignment library in the repository;
-- keep assignment assets under `assignments/` with stable paths;
-- remain small enough to understand and maintain.
+## Non-goals
 
-## Non-Goals
+WebGrader does not:
 
-The initial implementation will not:
-
-- provide a secure execution boundary against a determined or malicious learner;
+- provide a secure execution boundary against a determined learner;
 - guarantee recovery from every synchronous infinite loop in student JavaScript;
 - provide server-side browser automation;
-- support arbitrary npm packages;
-- support arbitrary remote JavaScript libraries;
+- support arbitrary npm packages or arbitrary remote libraries in student code;
 - perform screenshot or pixel-perfect visual comparison;
-- fully validate WCAG compliance;
+- fully validate WCAG compliance (axe checks catch selected rules);
 - provide sophisticated static analysis of code quality;
 - conceal browser-delivered tests or assignment data from a determined learner;
-- provide AI-assisted assignment generation;
-- become a full multi-file cloud IDE.
+- act as a full multi-file cloud IDE.
 
-The browser is treated as an educational execution environment, not a hostile-code sandbox. Security limitations must be documented honestly.
+The browser is an educational execution environment, not a hostile-code sandbox.
 
-## High-Level Architecture
+## High-level architecture
 
 ```text
 Tsugi gradable placement
         |
-        | existing lti_link.json assignment blob
+        | lti_link.json (assignment) + lti_result.json (student source)
         v
-WebGrader PHP shell and JavaScript application
+PHP shell (index.php, save.php, student-save.php, …)
+        | injects window.WEBGRADER
+        v
+JavaScript application (js/webgrader.js + modules)
         |
         +--> Instructions and editor tabs
         |
-        +--> One student iframe
-        |       |
-        |       +--> assembled HTML
-        |       +--> assembled CSS
-        |       +--> student JavaScript
-        |       +--> console/error capture
-        |       +--> optional mocked fetch()
+        +--> One student iframe (assembled HTML/CSS/JS)
+        |       +--> console / error capture
+        |       +--> optional mocked fetch() (designed; see Network)
         |
         +--> Test runner in parent page
-        |       |
-        |       +--> DOM inspection
-        |       +--> computed CSS inspection
-        |       +--> request-log inspection
-        |       +--> optional controlled interactions
+        |       +--> DOM / computed style / CSS source / validators / axe
         |
         v
-Existing Tsugi attempt and grading APIs
-        |
-        v
-LTI grade passback when applicable
+Tsugi attempt + grade APIs → LTI passback when applicable
 ```
 
-## Primary Components
+## Repository layout
 
-### 1. PHP Shell
+```text
+webgrader/
+├── index.php              # modes, bootstrap, HTML shell
+├── register.php, tsugi.php
+├── save.php               # instructor assignment JSON → lti_link.json
+├── student-save.php       # learner source → lti_result.json
+├── exercise.php           # load/normalize assignment + submission
+├── assignments.php        # Settings / LTI catalog keys → paths
+├── export-udemy.php       # author ZIP download
+├── grades.php, grade-detail.php
+├── css/webgrader.css
+├── js/
+│   ├── webgrader.js       # author + learner UI
+│   ├── runtime.js         # iframe assembly, dirty revision
+│   ├── tests.js           # declarative test handlers
+│   ├── validation.js      # assignment shape checks
+│   ├── console-capture.js
+│   ├── html-validate.js   # optional CDN html-validate
+│   ├── css-validate.js    # optional CDN css-tree
+│   └── axe-validate.js    # optional CDN axe-core
+├── assignments/
+│   ├── html/…/assignment.json
+│   ├── css/…/assignment.json
+│   ├── a11y/…/assignment.json
+│   └── javascript/…/assignment.json
+├── export/udemy/          # ZIP export pipeline
+├── scripts/export-udemy.php
+└── tests/udemy-export/
+```
 
-PHP should remain thin, following the DBGrader pattern.
+PHP stays thin. Grading rules live in `js/`.
 
-Likely responsibilities:
+## Primary components
+
+### PHP shell
+
+Responsibilities:
 
 - establish the Tsugi/LTI session;
-- determine author, learner, student-data, or settings mode;
-- load the assignment JSON from `lti_link.json`;
-- inject a bootstrap object such as `window.WEBGRADER`;
-- render the basic HTML shell;
-- save instructor-authored assignment JSON;
-- expose existing Tsugi attempt and grade endpoints;
-- perform server-side asset preflight when practical.
+- choose author, learner, settings, or student-data mode;
+- load assignment JSON from `lti_link.json` (and copy a built-in when Settings / LTI `exercise` says so);
+- load student source from `lti_result.json`;
+- inject `window.WEBGRADER` (URLs, exercise, submission, mode flags);
+- save instructor JSON (`save.php`) and student source (`student-save.php`);
+- hand grade/attempt recording to existing Tsugi APIs;
+- serve Udemy export (`export-udemy.php`).
 
-The PHP layer should not implement the browser grading rules.
+PHP does not implement browser grading rules.
 
-### 2. Learner Interface
+### Learner interface (`js/webgrader.js`)
 
-The learner interface should include:
-
-- assignment title and prompt;
-- tabbed HTML, CSS, and JavaScript editors;
-- only the tabs relevant to the assignment;
+- assignment title and HTML prompt;
+- tabbed HTML / CSS / JavaScript editors (only tabs relevant to file modes);
 - preview iframe;
-- **Run / Restart** button;
-- **Grade** button;
-- console panel;
-- test-results panel;
-- Reset to starter code;
-- source autosave and recovery;
-- a clear dirty-state warning when source has changed since the last Run.
+- **Run / Restart**, **Grade**, Reset to starter;
+- console panel and test-results panel;
+- dirty-state warning when source changed since last Run;
+- debounced autosave + localStorage backup;
+- instructor-only **Load solution** when `solution` is present.
 
-A single editor surface with tabs is preferred over three permanently visible editors.
+File modes: `editable`, `readonly`, `hidden`.
 
-Each logical file supports these modes:
+### Authoring interface
 
-- `editable`
-- `readonly`
-- `hidden`
+Edit mode supports:
 
-An `optional` mode can be added later if a real assignment requires it.
+- title and learner prompt;
+- HTML / CSS / JavaScript starter source and file modes;
+- tests, points, feedback;
+- assets and runtime hints;
+- reference `solution`;
+- view / copy / import complete assignment JSON;
+- select a built-in from the catalog (via Settings, copied into the placement);
+- **Export to Udemy** (compatibility preview + ZIP).
 
-### 3. Authoring Interface
+Authoring is intentionally practical (textareas), not a large IDE.
 
-The first authoring interface should be simple and practical.
+### Student iframe (`js/runtime.js`)
 
-It should support:
-
-- metadata and title;
-- learner prompt;
-- HTML, CSS, and JavaScript starter source;
-- file mode selection (`editable`, `readonly`, `hidden`);
-- preview configuration;
-- mock fetch routes;
-- tests;
-- points and feedback;
-- required asset declarations;
-- reference solution source;
-- assignment validation;
-- Run reference solution;
-- preview learner view;
-- view/copy complete assignment JSON;
-- import assignment JSON;
-- select a built-in assignment from the repository catalog.
-
-The first version may use textareas or the same lightweight code editor used by learners. A large drag-and-drop authoring system is not required.
-
-### 4. Student Iframe
-
-There is one student iframe.
-
-It contains the assembled student application:
+One iframe holds the assembled student application:
 
 ```text
 student iframe
-├── supplied or student HTML
-├── supplied or student CSS
-├── supplied or student JavaScript
-├── mocked browser APIs when configured
-└── runtime instrumentation
+├── HTML (starter or student)
+├── CSS (starter or student)
+├── JavaScript (starter or student)
+├── <base href> when assets / runtime.base_href require it
+└── console / error instrumentation
 ```
 
-HTML, CSS, and JavaScript editor tabs are not separate iframes.
+Every Run rebuilds the iframe from a clean state, clearing DOM mutations, listeners, globals, timers tied to the old window, console capture, and (when present) mock request history. Storage is reset on Run unless a future assignment model needs persistence.
 
-Every Run should rebuild the iframe from a clean state. Rebuilding clears normal page state including:
+### Test runner (`js/tests.js`)
 
-- DOM mutations;
-- event listeners;
-- JavaScript globals;
-- active timers associated with the discarded window;
-- console capture state;
-- mock request history.
+The runner lives in the parent page and inspects the running iframe. Tests are declarative handlers keyed by `type`. Optional validators load from pinned CDNs only when an assignment uses them.
 
-Storage behavior should initially be reset on Run. Persistent-storage assignments can be added in a later phase.
+The runner distinguishes student assertion failure, syntax/runtime errors, configuration errors, and grader failures. Instructor/grader problems must never be reported as student failures.
 
-### 5. Test Runner
+Validators (`html_validate`, `css_validate`, `axe_validate`) run first so the results panel order stays predictable.
 
-The test runner lives in the parent WebGrader application and evaluates the running student iframe.
+### Udemy export (`export/udemy/`)
 
-Initial tests should be declarative and implemented by reusable test handlers. Raw Jasmine-style tests may be supported later as an instructor escape hatch, but should not be required for normal assignment authoring.
+A separate pipeline converts compatible assignments into a ZIP (starter, solution, Jasmine `evaluation.js`, instructions, compatibility notes). WebGrader remains the source of truth; Udemy is a derived package for manual paste. See [UDEMY_EXPORT.md](UDEMY_EXPORT.md).
 
-The test runner should distinguish:
+## Learner lifecycle
 
-- student assertion failure;
-- student syntax error;
-- student runtime error;
-- unhandled promise rejection;
-- unexpected mock network request;
-- assignment configuration error;
-- grader runtime error.
-
-Instructor or grader failures must never be reported as student failures.
-
-## Learner Lifecycle
-
-### Source State
-
-WebGrader should track source revisions.
+### Source revisions
 
 ```text
-Edit source        -> DIRTY
-Run / Restart      -> RUNNING and CLEAN
-Interact           -> RUNNING and CLEAN
-Grade              -> evaluate current running state
-Edit source again  -> DIRTY; Grade disabled
+Edit source        → DIRTY
+Run / Restart      → RUNNING and CLEAN
+Interact           → RUNNING and CLEAN
+Grade              → evaluate current running state
+Edit source again  → DIRTY; Grade disabled
 ```
 
-The Grade button must not grade an iframe built from stale source.
-
-A source revision counter or stable hash is sufficient:
+Implementation sketch:
 
 ```javascript
-sourceRevision += 1;          // on edit
+sourceRevision += 1;              // on edit
 runningRevision = sourceRevision; // after successful Run
+// Grade allowed only when runningRevision === sourceRevision
 ```
-
-Grade is allowed only when `runningRevision === sourceRevision`.
 
 ### Run / Restart
 
-Run / Restart:
-
-1. validates that the assignment can run;
-2. clears previous preview, console, request log, and transient results;
-3. creates or replaces the student iframe;
-4. writes HTML and CSS;
-5. installs runtime instrumentation and fetch mocks;
-6. injects student JavaScript;
-7. marks the running revision clean;
-8. enables interaction and grading.
+1. Validate that the assignment can run.
+2. Clear previous preview, console, and transient results.
+3. Replace the student iframe.
+4. Write HTML and CSS; install instrumentation.
+5. Inject student JavaScript.
+6. Mark the running revision clean.
+7. Enable interaction and grading.
 
 ### Interact
 
-The learner may interact directly with the student iframe before grading:
-
-- click buttons;
-- type into forms;
-- submit forms;
-- trigger event handlers;
-- make mocked fetch requests;
-- manipulate application state through the interface.
-
-This interaction-first design avoids a general-purpose “wait and hope” grading pattern.
+Learners may click, type, and otherwise use the preview before Grade. Interaction-first grading avoids a general “wait and hope” pattern. Some tests may also perform controlled actions with bounded timeouts (not fixed sleeps).
 
 ### Grade
 
-Grade normally inspects the page as the learner left it.
+1. Refuse if source is dirty.
+2. Run configured tests against the current iframe (and CSS/HTML source where needed).
+3. Compute partial credit.
+4. Show structured feedback.
+5. Autosave source.
+6. Record the attempt and update the grade via Tsugi (highest score policy unless Tsugi says otherwise).
+7. LTI grade passback when applicable.
 
-It may inspect:
+Grade may inspect DOM, attributes, text, computed styles, console/runtime errors, CSS source (for pseudo-class rules), and intentionally exposed JavaScript functions.
 
-- current DOM;
-- element attributes and text;
-- computed styles;
-- element geometry;
-- console and runtime errors;
-- mock fetch request history;
-- permitted storage state;
-- JavaScript functions or values intentionally exposed by the exercise.
+## Iframe trust model
 
-Some tests may perform controlled actions themselves. These should use event- or condition-based completion with bounded timeouts, not arbitrary fixed sleeps.
+The iframe is same-origin with:
 
-Grade should:
-
-1. verify the source is not dirty;
-2. execute all configured tests;
-3. calculate partial credit;
-4. display structured feedback;
-5. autosave current source;
-6. record the attempt;
-7. update the stored grade according to Tsugi policy;
-8. perform LTI grade passback when applicable.
-
-The default policy should preserve the highest achieved score unless existing Tsugi behavior specifies otherwise.
-
-## Iframe Trust Model
-
-### Phase 1 Choice
-
-The initial implementation may use a same-origin iframe so the parent can directly inspect:
-
-```javascript
-frame.contentDocument
-frame.contentWindow
+```text
+sandbox="allow-scripts allow-same-origin allow-popups"
 ```
 
-This keeps the first implementation understandable and enables direct DOM and computed-style grading.
+so the parent can use `contentDocument` / `contentWindow` for DOM and computed-style grading, and learners can open `target="_blank"` links.
 
-The iframe should still use an appropriate `sandbox` attribute and only the permissions required for the assignment runtime.
+Same-origin student JavaScript is not a secure hostile-code boundary. A determined learner may inspect or alter parent state or browser-delivered tests. That is acceptable for typical course use if documented.
 
-### Limitation
+A possible future hardening path is an opaque-origin sandbox with an in-frame grading agent and `postMessage()`. That is not required for the current design.
 
-Same-origin student JavaScript is not a secure hostile-code boundary. A determined learner may attempt to inspect or alter parent state or browser-delivered tests.
+## Infinite loops and runaway code
 
-This is acceptable for the initial educational use case, provided the limitation is clearly documented.
+Synchronous infinite loops in student JavaScript can freeze the tab. WebGrader documents this, rebuilds the iframe on each Run, reports normal runtime errors, and does not claim that an iframe timeout can stop synchronous code. Keep introductory assignments short.
 
-### Future Hardening
+Possible later mitigations (not current requirements): Web Workers for pure-function exercises, source instrumentation, stronger isolation, or server-side browser execution for high-stakes grading.
 
-A future phase may use an opaque-origin sandboxed iframe with an in-frame grading agent and `postMessage()` communication. This is explicitly deferred until the core grader and assignment model are proven useful.
+## Console and error capture
 
-## Infinite Loops and Runaway Code
+Before student JavaScript runs, the iframe is instrumented for `console.log` / `info` / `warn` / `error`, uncaught `error`, and `unhandledrejection`. Output appears in the WebGrader console panel with limits on entry count, value length, total text, and stack traces. Circular values are formatted safely. The console clears on Run / Restart.
 
-Student code such as this can freeze the browser UI thread:
+Console noise does not automatically zero the score unless the assignment includes an explicit test (for example `console_includes` or `no_runtime_errors`).
 
-```javascript
-while (true) {}
-```
+## Network and mock fetch
 
-A normal iframe does not fully protect the parent from this condition.
+The assignment JSON may describe a mock network layer (routes, JSON responses, unmatched-request policy) so fetch/JSON exercises can be deterministic without external APIs. When implemented, mocks should:
 
-The first version should:
-
-- document the limitation;
-- recreate the iframe on each Run;
-- provide normal runtime error reporting;
-- avoid claiming that an iframe timeout can terminate synchronous code;
-- encourage short introductory assignments.
-
-Possible later mitigations:
-
-- Web Worker execution for pure-function JavaScript exercises;
-- source instrumentation for common loop forms;
-- stronger origin or process isolation;
-- server-side browser execution for high-stakes grading.
-
-These are not Phase 1 requirements.
-
-## Console and Error Capture
-
-Before student JavaScript executes, WebGrader should instrument the iframe to capture:
-
-- `console.log()`;
-- `console.info()`;
-- `console.warn()`;
-- `console.error()`;
-- uncaught `error` events;
-- `unhandledrejection` events.
-
-The learner should see these in a WebGrader console panel.
-
-The console implementation must limit:
-
-- number of retained entries;
-- length of each serialized value;
-- total retained text;
-- stack trace length.
-
-Circular and complex values should be formatted safely.
-
-Console output is cleared on Run / Restart.
-
-Assignments may include a “no serious runtime errors” test, but console errors should not automatically produce a zero unless the assignment says so.
-
-## Mock Fetch and JSON
-
-Fetch and JSON assignments should normally use a deterministic mock network layer installed before student JavaScript executes.
-
-The mock layer should:
-
-- replace `window.fetch` in the student iframe;
+- replace `window.fetch` in the student iframe before student code runs;
 - match configured routes;
-- return native or compatible `Response` objects;
-- record requests;
-- normalize method and headers;
-- expose request URL, method, headers, and body to tests;
-- reject unmatched requests by default;
-- block real network access by default.
+- return compatible `Response` objects;
+- record requests for tests;
+- deny unmatched requests by default.
 
-Initial route matching may be deliberately simple:
-
-- exact method;
-- exact path and query string;
-- optional JSON body comparison.
-
-Later phases may add query normalization, path parameters, sequential responses, delays, malformed JSON, and simulated network failures.
-
-Example:
+Example shape:
 
 ```json
 {
@@ -427,9 +286,7 @@ Example:
         "method": "GET",
         "url": "/api/people",
         "status": 200,
-        "headers": {
-          "Content-Type": "application/json"
-        },
+        "headers": { "Content-Type": "application/json" },
         "json": [
           { "id": 1, "name": "Ada Lovelace" },
           { "id": 2, "name": "Grace Hopper" }
@@ -440,19 +297,15 @@ Example:
 }
 ```
 
+Built-in assignments today do not require mock fetch; the schema and design leave room for it without changing the Edit → Run → Grade model.
+
 ## Assignment JSON
 
 ### Storage
 
-The entire assignment is stored as one JSON object in the existing placement JSON field.
+The entire assignment lives in `lti_link.json`. Student source and attempt results stay in Tsugi student/attempt storage, not in the assignment definition.
 
-No new relational assignment model is required.
-
-Student source, attempts, and grading results remain in existing Tsugi student/attempt storage and are not written into the assignment definition.
-
-### Version Fields
-
-Use separate fields for schema and assignment revision:
+### Version fields
 
 ```json
 {
@@ -463,301 +316,114 @@ Use separate fields for schema and assignment revision:
 }
 ```
 
-- `schema_version` describes the JSON format understood by WebGrader.
-- `assignment_version` describes a revision of this particular assignment.
+- `schema_version` — format understood by WebGrader.
+- `assignment_version` — revision of this particular assignment.
 
-### Initial Example
+### Core shape
 
 ```json
 {
   "type": "webgrader",
   "schema_version": 1,
-  "id": "javascript-fetch-people-001",
+  "id": "html-headings-001",
   "assignment_version": 1,
-  "title": "Fetch and Display People",
-  "prompt": "<p>Load the people list and display each name.</p>",
-
+  "title": "Headings and Paragraphs",
+  "prompt": "<p>Build a short page with a heading and paragraphs.</p>",
   "files": {
-    "html": {
-      "mode": "readonly",
-      "starter": "<button id=\"load\">Load People</button>\n<ul id=\"people\"></ul>"
-    },
-    "css": {
-      "mode": "hidden",
-      "starter": ""
-    },
-    "javascript": {
-      "mode": "editable",
-      "starter": "document.querySelector('#load').addEventListener('click', async () => {\n    // Your code\n});"
-    }
+    "html": { "mode": "editable", "starter": "…" },
+    "css": { "mode": "hidden", "starter": "" },
+    "javascript": { "mode": "hidden", "starter": "" }
   },
-
-  "runtime": {
-    "preview": true,
-    "storage": "reset_on_run"
-  },
-
+  "runtime": { "preview": true },
   "assets": [],
+  "tests": [],
+  "grading": { "maximum_points": 10, "partial_credit": true },
+  "solution": { "html": "…", "css": "", "javascript": "" }
+}
+```
 
-  "network": {
-    "mode": "mock",
-    "unmatched": "deny",
-    "routes": [
-      {
-        "id": "people-route",
-        "method": "GET",
-        "url": "/api/people",
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/json"
-        },
-        "json": [
-          { "id": 1, "name": "Ada Lovelace" },
-          { "id": 2, "name": "Grace Hopper" }
-        ]
-      }
-    ]
-  },
+**Required:** `type`, `schema_version`, `id`, `assignment_version`, `title`, `prompt`, `files`, `tests`.
 
-  "tests": [
-    {
-      "id": "people-list-count",
-      "name": "Displays both people",
-      "type": "selector_count",
-      "selector": "#people li",
-      "expected": 2,
-      "points": 5,
-      "feedback": "Display one list item for each returned person."
-    },
-    {
-      "id": "people-request",
-      "name": "Requests the people endpoint",
-      "type": "request_exists",
-      "method": "GET",
-      "url": "/api/people",
-      "points": 5,
-      "feedback": "Fetch /api/people when the Load People button is used."
-    }
-  ],
+**Common optional:** `runtime`, `assets`, `network`, `grading`, `hints`, `metadata`, `source`, `solution`.
 
-  "grading": {
-    "maximum_points": 10,
-    "partial_credit": true
+Editor/library versions are global deployment details, not per-assignment fields.
+
+## Test types
+
+Declarative handlers in `js/tests.js` (plus optional validator modules):
+
+### HTML / DOM
+
+- `selector_exists`, `selector_not_exists`, `selector_count`
+- `text_equals`, `text_contains`
+- `attribute_equals`, `attribute_exists`
+- `html_validate` — html-validate from pinned CDN when present
+
+### CSS
+
+- `computed_style_equals`, `computed_styles_equals`
+- `css_validate` — css-tree from pinned CDN
+- `css_rule_declares` — selector/property/value in CSS source (for `:hover` / `:visited` / `:active`)
+- visibility / geometry helpers as implemented in `tests.js`
+
+### JavaScript / interaction
+
+- `console_includes`
+- `call_function` (global function with random ints; `expect_op`: `sum` | `square`)
+- `no_runtime_errors`
+- DOM tests after learner interaction
+
+### Accessibility
+
+- `axe_validate` — axe-core against the live preview iframe; prefer explicit `runOnly` rule ids for teaching
+
+### Network (when mock layer is present)
+
+- `request_exists`, `request_json_body_equals`
+
+CDN/library load failures for optional validators credit that test automatically so an external outage does not fail the learner; student content errors still fail normally.
+
+## Scoring and feedback
+
+Each test has a stable `id`, learner-facing `name`, `points`, optional failure `feedback`, and type-specific fields.
+
+```text
+score = sum(points earned) / maximum_points
+```
+
+`grading.maximum_points` is honored when set; otherwise the sum of test points is used. Partial credit is the default.
+
+The UI shows passed/failed tests, points, failure feedback, and separates student syntax/runtime errors from assignment/grader errors. A broken test or missing required asset disables grading rather than silently reducing the student score.
+
+## Assignment repository and catalog
+
+Built-ins live under `assignments/{html,css,a11y,javascript}/…/assignment.json`. `assignments.php` maps Settings / LTI `exercise` keys to those directories.
+
+When an instructor selects a built-in, its JSON is copied into `lti_link.json` as a frozen editable copy. Provenance may be retained:
+
+```json
+{
+  "source": {
+    "assignment_id": "…",
+    "path": "assignments/html/simple-list/assignment.json"
   }
 }
 ```
 
-### Initial Required Fields
+The placement does not auto-update when the repository copy changes.
 
-- `type`
-- `schema_version`
-- `id`
-- `assignment_version`
-- `title`
-- `prompt`
-- `files`
-- `tests`
+## Asset policy
 
-### Initial Optional Fields
+Assignment-owned assets live under `assignments/`. Published paths are append-only compatibility contracts: do not delete, move, rename, or silently change meaning; add a new filename for a new version (`cat-v1.png`, `cat-v2.png`).
 
-- `runtime`
-- `assets`
-- `network`
-- `grading`
-- `hints`
-- `metadata`
-- `source`
-- `solution`
-
-Deployment details such as the code editor version or bundled test library version should remain global rather than being repeated in each assignment.
-
-## Initial Test Types
-
-Phase 1 should implement only a small set of high-value declarative tests.
-
-### HTML / DOM
-
-- `selector_exists`
-- `selector_not_exists`
-- `selector_count`
-- `text_equals`
-- `text_contains`
-- `attribute_equals`
-- `attribute_exists`
-- `html_validate` (optional; loads html-validate from a pinned CDN ES module only when present)
-- `css_validate` (optional; loads css-tree from a pinned CDN ES module only when present)
-- `css_rule_declares` (require a selector/property in CSS source — for `:visited` / `:hover` / `:active`)
-
-### CSS
-
-- `computed_style_equals`
-- `computed_styles_equals` (several properties on one element)
-- `css_validate` (see above)
-- `css_rule_declares` (see above)
-- `element_visible`
-- `element_hidden`
-- basic geometry comparison such as same row, stacked, or ordered position
-
-### JavaScript / Interaction State
-
-- `console_includes` (match text in the captured Console panel after Run)
-- `call_function` (call a global student function with random ints; `expect_op`: `sum` | `square`)
-- `no_runtime_errors`
-- `request_exists`
-- `request_json_body_equals`
-- current DOM tests after learner interaction
-
-Phase 1 should not attempt to implement every possible test category.
-
-### Later Test Types
-
-Possible later additions:
-
-- controlled click/input/change/submit actions;
-- function-call tests;
-- promise and async tests;
-- localStorage/sessionStorage tests;
-- responsive viewport tests;
-- accessibility checks;
-- HTML structure validation;
-- sequential mock responses;
-- custom Jasmine-style instructor tests.
-
-## Test Isolation
-
-The initial default is to grade the current running iframe state.
-
-Tests should be observational whenever practical and should not mutate the page.
-
-A later phase may support test isolation modes:
-
-- `current_state`
-- `fresh_run`
-- `shared_sequence`
-
-`current_state` is the only required mode for the first implementation.
-
-When controlled-interaction tests are added, they should default to a fresh iframe unless explicitly designed as a sequence.
-
-## Scoring and Feedback
-
-Each test has:
-
-- stable `id`;
-- learner-facing `name`;
-- `points`;
-- optional failure `feedback`;
-- test-specific configuration.
-
-Score is:
-
-```text
-sum(points earned) / maximum_points
-```
-
-Partial credit is the default.
-
-The grader should show:
-
-- passed and failed tests;
-- points earned and possible;
-- useful failure feedback;
-- student syntax/runtime errors separately;
-- assignment/grader errors separately.
-
-A broken test or missing required asset disables grading rather than reducing the student score.
-
-## Assignment Repository
-
-Built-in assignments live under `assignments/`.
-
-Recommended structure:
-
-```text
-assignments/
-├── html/
-│   └── headings-and-paragraphs/
-│       ├── assignment.json
-│       └── assets/
-├── css/
-│   └── flexbox-cards/
-│       ├── assignment.json
-│       └── assets/
-├── javascript/
-│   └── fetch-people/
-│       ├── assignment.json
-│       └── assets/
-└── applications/
-    └── todo-list/
-        ├── assignment.json
-        └── assets/
-```
-
-An assignment may be represented as a single JSON file or as `assignment.json` in a directory. Directory-per-assignment is preferred once assets are involved.
-
-The repository should eventually include:
-
-```text
-schema/
-    webgrader-v1.schema.json
-tools/
-    validate-assignments.js
-assignments.php
-README.md
-DESIGN.md
-```
-
-## Asset Policy
-
-### Location
-
-All assignment-owned assets must live under `assignments/` in the WebGrader repository checkout.
-
-Examples:
-
-- images;
-- JSON data files;
-- assignment-specific CSS;
-- assignment-specific text data;
-- small media files needed by the exercise.
-
-### Stable Paths
-
-Published asset paths are append-only compatibility contracts.
-
-Once an asset is referenced by a published assignment:
-
-- do not delete it;
-- do not move it;
-- do not rename it;
-- avoid changing its meaning in place;
-- add a new filename for a changed version.
-
-Example:
-
-```text
-people-v1.json
-people-v2.json
-```
-
-An active LTI link may contain old assignment JSON while using the currently checked-out repository assets. Stable asset paths allow the old JSON to continue working without copying assets into placement storage or pinning every placement to a Git commit.
-
-### Required Asset Declaration
-
-Each assignment must declare the assets it requires.
+Declare required assets in the assignment:
 
 ```json
 {
   "assets": [
     {
-      "id": "people-data",
-      "path": "assignments/javascript/fetch-people/assets/people-v1.json",
-      "type": "json",
-      "required": true
-    },
-    {
-      "id": "avatar",
-      "path": "assignments/javascript/fetch-people/assets/grace-v1.png",
+      "id": "photo",
+      "path": "assignments/a11y/fix-accessibility/assets/cat-v1.png",
       "type": "image",
       "required": true
     }
@@ -765,396 +431,76 @@ Each assignment must declare the assets it requires.
 }
 ```
 
-### Asset Preflight
+Missing required assets should surface as configuration errors and disable Run/Grade without recording a failed student attempt. Reject paths outside `assignments/`, `..` traversal, absolute filesystem paths, arbitrary remote JavaScript, and unsupported or oversized assets.
 
-Required assets should be checked:
+## Student submission state
 
-1. in the authoring interface;
-2. by repository validation/CI;
-3. when the assignment launches.
-
-If a required asset is missing:
-
-- show an assignment configuration error;
-- identify the missing path;
-- disable Run and Grade;
-- do not record a failed student attempt.
-
-Initial validation only needs existence and permitted-path checks. Optional SHA-256 integrity checking can be added later.
-
-### Asset Safety Rules
-
-The validator should reject:
-
-- paths outside `assignments/`;
-- `..` path traversal;
-- absolute filesystem paths;
-- missing required files;
-- arbitrary remote JavaScript;
-- unsupported or excessively large assets.
-
-## Assignment Catalog and Import
-
-Built-in assignments should be exposed through an assignment catalog similar to DBGrader.
-
-Instructor setup options:
-
-- start from scratch;
-- import/paste assignment JSON;
-- choose a built-in assignment.
-
-When a built-in assignment is selected, its complete JSON is copied into `lti_link.json` as a frozen editable copy.
-
-The placement JSON may retain provenance:
-
-```json
-{
-  "source": {
-    "assignment_id": "javascript-fetch-people-001",
-    "path": "assignments/javascript/fetch-people/assignment.json"
-  }
-}
-```
-
-The active placement does not automatically update when the repository assignment changes.
-
-A compare/update workflow can be added later.
-
-## Student Submission State
-
-The assignment definition and student work are separate.
-
-A student source payload may resemble:
+Assignment definition and student work are separate. Student source roughly:
 
 ```json
 {
   "schema": "webgrader-submission",
   "version": 1,
   "files": {
-    "html": "...",
-    "css": "...",
-    "javascript": "..."
+    "html": "…",
+    "css": "…",
+    "javascript": "…"
   },
   "source_revision": 12,
   "last_run_revision": 12
 }
 ```
 
-Runtime logs and grade results are transient attempt data, not editable student source.
+Autosave is independent of Run and Grade: debounced `student-save.php`, localStorage backup keyed by link id, restore on launch, Reset to starter with confirmation. Transient iframe DOM state is not autosaved.
 
-The implementation should use existing Tsugi storage patterns rather than introducing new WebGrader-specific tables unless a concrete requirement later proves necessary.
+## Assignment validation
 
-## Autosave and Recovery
+`js/validation.js` checks shape before save/run: JSON structure, supported schema, unique test ids, file modes, supported test types, non-negative points, required fields per test type, and asset path rules. Stronger checks (reference solution passes, starter does not already pass everything, JSON Schema / CI) can sit beside this without changing the runtime model.
 
-Student source should autosave independently of Run and Grade.
+## Reference solutions
 
-Initial behavior:
-
-- debounced server autosave using existing Tsugi storage patterns;
-- optional local browser backup for recovery;
-- explicit Reset to starter code with confirmation;
-- restore saved source on launch;
-- do not autosave transient iframe DOM state.
-
-The learner should not lose work because the browser reloads or the iframe is restarted.
-
-## Assignment Validation
-
-Validation should occur before saving and before running.
-
-Initial checks:
-
-- valid JSON;
-- supported `type` and `schema_version`;
-- unique assignment ID;
-- unique test IDs;
-- supported file modes;
-- at least one editable file;
-- valid test types;
-- numeric non-negative points;
-- points total matches configured maximum or maximum is calculated automatically;
-- required selectors and expected values present for each test type;
-- no conflicting mock routes with identical method and URL;
-- all required assets exist;
-- all asset paths remain under `assignments/`;
-- assignment blob remains within a configured size limit.
-
-Later validation may also confirm:
-
-- the reference solution passes all tests;
-- starter source does not already pass all tests;
-- selectors parse correctly;
-- mock response bodies match declared content types;
-- assignment metadata is complete for catalog publication.
-
-## Reference Solutions
-
-Assignments may include an optional top-level `solution` object:
-
-```json
-"solution": {
-  "html": "…",
-  "css": "…",
-  "javascript": "…"
-}
-```
-
-In learner mode, instructors see a **Load solution** button when a solution is present. It copies the reference source into the editors so the instructor can Run and Grade. Learners do not get the button.
-
-Reference solution fields should not be inserted into the learner iframe automatically. The design does not claim they are secret when delivered to the browser or stored in a public repository.
-
-## Editor Choice
-
-The first implementation should use a lightweight browser code editor with modes for HTML, CSS, and JavaScript.
-
-CodeMirror is a reasonable default because it is lighter than a full IDE-style editor. A plain textarea remains acceptable for the earliest prototype.
-
-The editor implementation is a deployment detail and should not appear in every assignment JSON.
+Optional top-level `solution` with `html` / `css` / `javascript`. Instructors get **Load solution** in learner mode; learners do not. Solutions are not injected into the iframe automatically and are not treated as secret when shipped in the browser or a public repo.
 
 ## Accessibility
 
-WebGrader itself should be keyboard accessible and usable with screen readers.
+The tool UI should remain keyboard-usable. Assignments may use `axe_validate` and/or DOM attribute tests for teaching checks (`lang`, `alt`, labels, button names). Do not claim full automated WCAG conformance.
 
-Initial assignment tests may include basic accessibility checks such as:
+## Design principles
 
-- required `alt` attributes;
-- associated form labels;
-- duplicate IDs;
-- use of native buttons for button interactions.
+1. Keep PHP thin.
+2. Keep the assignment in one JSON blob.
+3. Use one student iframe.
+4. Separate Edit, Run, Interact, and Grade.
+5. Grade observable results whenever possible.
+6. Prefer declarative tests over arbitrary instructor code.
+7. Treat grader/configuration failures differently from student failures.
+8. Keep assets under `assignments/` and never break published paths.
+9. Reuse existing Tsugi storage and grade infrastructure.
+10. Prefer small, understandable extensions over a generalized online IDE.
 
-WebGrader should not claim full automated accessibility conformance testing.
+## Open extensions
 
-## Phased Implementation
+Useful directions that fit the current architecture without redesigning it:
 
-### Phase 0: Skeleton and JSON Loading
-
-Goal: establish the Tsugi tool and assignment lifecycle without complex grading.
-
-Implement:
-
-- repository/tool skeleton based on DBGrader conventions;
-- `index.php`, save path, settings/catalog hooks, and thin PHP bootstrap;
-- load/save assignment JSON in `lti_link.json`;
-- author and learner modes;
-- minimal assignment schema validation;
-- built-in assignment catalog under `assignments/`;
-- one trivial HTML assignment.
-
-Do not implement fetch mocking, sophisticated editors, or many test types.
-
-Success criterion:
-
-> An instructor can select or paste an assignment JSON blob, save it, and a learner can open the assignment.
-
-### Phase 1: HTML Grader MVP
-
-Goal: prove the complete edit/run/grade loop with the smallest useful grader.
-
-Implement:
-
-- HTML editor tab;
-- hidden/read-only CSS and JavaScript support in the schema, even if minimally used;
-- one student iframe;
-- Run / Restart;
-- dirty-state protection;
-- Grade current iframe state;
-- initial DOM test types;
-- test results and partial credit;
-- source autosave;
-- attempt recording and grade passback;
-- Reset to starter;
-- asset declarations and launch preflight;
-- several built-in HTML assignments.
-
-Success criterion:
-
-> A learner can complete an HTML assignment and receive a correct Tsugi/LTI grade without any new database model.
-
-### Phase 2: CSS Grading
-
-Goal: add practical CSS exercises without visual screenshot comparison.
-
-Implement:
-
-- CSS editor tab;
-- read-only supplied HTML;
-- `getComputedStyle()` tests;
-- visibility tests;
-- a small set of geometry/layout tests;
-- optional preview viewport dimensions;
-- several built-in CSS assignments.
-
-Avoid exact raw CSS source matching when observable layout or computed style is sufficient.
-
-Success criterion:
-
-> A learner can complete selector, typography, spacing, Flexbox, or basic Grid assignments with robust observable tests.
-
-### Phase 3: JavaScript, Console, and DOM Events
-
-Goal: grade introductory browser JavaScript.
-
-Implement:
-
-- JavaScript editor tab;
-- console capture panel;
-- uncaught error and unhandled rejection capture;
-- DOM event assignments using manual learner interaction;
-- tests that inspect the resulting DOM state;
-- `no_runtime_errors` test;
-- several built-in JavaScript assignments.
-
-Success criterion:
-
-> A learner can implement button, form, and DOM-manipulation behavior, interact with it, and grade the resulting state.
-
-### Phase 4: Mock Fetch and JSON
-
-Goal: support deterministic fetch/JSON assignments.
-
-Implement:
-
-- route-based mock `fetch()` installed before student code;
-- request logging;
-- exact method/URL matching;
-- JSON responses;
-- request existence and JSON-body tests;
-- unmatched-request denial;
-- basic HTTP error and network rejection simulation if needed;
-- several built-in fetch assignments.
-
-Success criterion:
-
-> A learner can fetch mocked JSON, render it, submit JSON, and receive deterministic grading without external APIs.
-
-### Phase 5: Authoring and Repository Tooling
-
-Goal: make assignment creation and maintenance pleasant for instructors.
-
-Implement:
-
-- structured authoring forms for common test types;
-- raw JSON view/import/export;
-- reference solution support;
-- run reference solution against tests;
-- JSON Schema file;
-- repository validator;
-- GitHub Actions validation;
-- catalog metadata and filtering;
-- documentation for assignment authors.
-
-Success criterion:
-
-> An instructor can create, validate, preview, commit, and reuse assignments without hand-editing every JSON field.
-
-### Phase 6: Optional Enhancements
-
-Only implement after the earlier phases are stable and used.
-
-Candidates:
-
-- controlled automated interactions;
-- fresh-run test isolation;
-- responsive viewport test suites;
-- storage exercises;
-- more flexible route matching;
-- sequential network responses;
-- custom Jasmine-style tests;
-- improved iframe isolation using `postMessage()`;
-- Web Worker mode for pure JavaScript functions;
-- assignment compare/update from repository provenance;
-- progressive hints and solution reveal;
-- AI assistance for assignment construction.
-
-These are not commitments and should not complicate earlier phases.
-
-## Suggested Initial File Layout
-
-```text
-webgrader/
-├── assignments/
-│   ├── html/
-│   ├── css/
-│   ├── javascript/
-│   └── applications/
-├── css/
-│   └── webgrader.css
-├── js/
-│   ├── author.js
-│   ├── learner.js
-│   ├── runtime.js
-│   ├── tests.js
-│   ├── fetch-mock.js
-│   ├── console-capture.js
-│   └── validation.js
-├── schema/
-│   └── webgrader-v1.schema.json
-├── DESIGN.md
-├── README.md
-├── assignments.php
-├── index.php
-├── save.php
-├── grades.php
-├── grade-detail.php
-└── tsugi.php
-```
-
-This is illustrative. The implementation should mirror DBGrader naming and organization when that reduces friction.
-
-## Initial Acceptance Tests
-
-The first production-capable release should demonstrate:
-
-1. HTML-only assignment with editable HTML.
-2. CSS-only assignment with read-only HTML and editable CSS.
-3. JavaScript-only assignment with read-only HTML and editable JavaScript.
-4. Combined HTML/CSS/JavaScript assignment.
-5. Console syntax/runtime error display.
-6. Manual interaction followed by Grade.
-7. Mock GET returning JSON.
-8. Mock POST with JSON body inspection.
-9. Missing required asset disables grading as a configuration error.
-10. Editing after Run disables Grade until rerun.
-11. Student source survives page reload.
-12. Correct partial score is recorded and passed through existing Tsugi grade handling.
-
-## Design Principles
-
-1. **Keep PHP thin.**
-2. **Keep the assignment in one JSON blob.**
-3. **Use one student iframe.**
-4. **Separate Edit, Run, Interact, and Grade.**
-5. **Grade observable results whenever possible.**
-6. **Prefer declarative tests over arbitrary instructor code.**
-7. **Treat grader/configuration failures differently from student failures.**
-8. **Keep assets under `assignments/` and never break published paths.**
-9. **Reuse existing Tsugi storage and grade infrastructure.**
-10. **Do not solve future problems before the basic grader is useful.**
-
-## Open Questions
-
-Resolved for Phase 0–1 (see Status). Remaining for later phases:
-
-- whether reference solutions live inside `assignment.json` or in instructor-only companion files;
-- exact CodeMirror version and loading strategy;
-- browser support baseline;
-- maximum assignment JSON and asset sizes;
-- naming of the final published repository (`webgrader` is the working name);
-- whether prompts should later support Markdown rendered to HTML.
+- deterministic mock `fetch` and request-log tests;
+- richer authoring forms for common test types;
+- JSON Schema + repository CI validator;
+- controlled automated interactions and optional fresh-run isolation;
+- stronger iframe isolation via `postMessage()`;
+- CodeMirror (or similar) as a deployment detail;
+- catalog compare/update from repository provenance.
 
 ## Summary
 
-WebGrader should begin as a small browser-based extension of the successful DBGrader pattern:
+WebGrader is a small browser grader in the DBGrader mold:
 
-- one complete assignment JSON blob in the existing placement field;
-- tabbed HTML, CSS, and JavaScript source;
+- one assignment JSON blob in the placement field;
+- tabbed HTML / CSS / JavaScript source;
 - one rebuilt student iframe;
 - Edit → Run → Interact → Grade;
-- direct observable DOM and CSS tests;
-- console/error capture;
-- deterministic mocked fetch and JSON;
+- declarative DOM, CSS, console, function, validator, and axe tests;
 - existing Tsugi attempts, grades, and LTI passback;
-- curated repository assignments with append-only required assets;
-- phased implementation that proves value before adding complexity.
+- curated repository assignments with stable assets;
+- optional Udemy ZIP export as a derived package.
 
-The first milestone is not a generalized online IDE. It is a dependable HTML grader with the right data model and lifecycle so CSS, JavaScript, fetch, authoring, and future AI assistance can be added without redesigning the foundation.
+The foundation is the data model and lifecycle, not a general-purpose IDE.
