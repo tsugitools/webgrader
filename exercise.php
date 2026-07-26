@@ -6,12 +6,13 @@
  *   1. Built-in key from Settings, else LTI custom exercise=, else ?exercise=
  *      (then catalog file / existing link JSON for that built-in)
  *   2. Valid assignment already in lti_link.json
- *   3. Full assignment in LTI custom_config / ?inherit=
+ *   3. Full assignment in LTI custom_config / ?inherit= / ?exercise= as rlid (lessons.json)
  *   4. Empty stub
  *
  * On first launch, Settings::linkGetCustom('exercise') copies LTI custom into
  * the link settings row only when the setting is not already present. If
- * Settings and custom are both empty, ?exercise=CatalogKey seeds Settings.
+ * Settings and custom are both empty, ?exercise=CatalogKey seeds Settings
+ * (tool-local, same idea as ?inherit= for full config).
  */
 
 require_once __DIR__ . '/assignments.php';
@@ -113,31 +114,29 @@ function webgrader_decode_exercise_json($raw) {
 /**
  * Resolve built-in assignment key.
  *
- * Precedence:
- *   1. Link Settings already configured (instructor Settings pick)
+ * Precedence (tool-local, like ?inherit=):
+ *   1. Link Settings already configured
  *   2. LTI custom exercise= (copied into Settings when Settings is empty)
  *   3. ?exercise=CatalogKey when nothing is configured yet
  *
  * @return string|null
  */
 function webgrader_resolve_exercise_key() {
-    global $assignments, $LINK;
+    global $LINK;
 
+    $assignments = webgrader_assignment_catalog();
     $assn = null;
     if ($LINK) {
-        // Settings first; if empty, LTI custom exercise= (and seeds Settings).
         $assn = Settings::linkGetCustom('exercise');
         if ($assn === '0' || $assn === 0 || $assn === false || $assn === '') {
             $assn = null;
         }
     }
 
-    // Last resort when Settings / custom did not configure a built-in.
     if (!$assn && isset($_GET['exercise'])) {
         $g = $_GET['exercise'];
         if (is_string($g) && isset($assignments[$g])) {
             $assn = $g;
-            // Seed Settings so the placement stays configured (same idea as custom).
             if ($LINK && method_exists($LINK, 'settingsSet')) {
                 $LINK->settingsSet('exercise', $assn);
             }
@@ -151,7 +150,11 @@ function webgrader_resolve_exercise_key() {
 }
 
 /**
- * Pull full assignment JSON from LTI custom_config, then lessons.json via ?inherit=.
+ * Pull full assignment JSON from LTI custom_config, then lessons.json.
+ *
+ * Lessons lookup uses ?inherit=<resource_link_id>, or if that is absent,
+ * ?exercise=<resource_link_id> (same config JSON shape). Built-in catalog
+ * keys are handled earlier by webgrader_resolve_exercise_key().
  */
 function webgrader_load_custom_exercise() {
     global $CFG;
@@ -162,10 +165,17 @@ function webgrader_load_custom_exercise() {
         return $exercise;
     }
 
-    if (isset($_GET['inherit']) && isset($CFG->lessons)) {
+    $rlid = null;
+    if (isset($_GET['inherit']) && is_string($_GET['inherit']) && strlen($_GET['inherit'])) {
+        $rlid = $_GET['inherit'];
+    } else if (isset($_GET['exercise']) && is_string($_GET['exercise']) && strlen($_GET['exercise'])) {
+        $rlid = $_GET['exercise'];
+    }
+
+    if ($rlid && isset($CFG->lessons)) {
         $lessons = new Lessons($CFG->lessons);
         if ($lessons) {
-            $lti = $lessons->getLtiByRlid($_GET['inherit']);
+            $lti = $lessons->getLtiByRlid($rlid);
             if (isset($lti->custom) && is_array($lti->custom)) {
                 foreach ($lti->custom as $c) {
                     if (isset($c->key, $c->json) && $c->key === 'config') {

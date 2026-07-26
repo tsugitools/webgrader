@@ -24,7 +24,7 @@ Learners edit source, press **Run / Restart** to preview in an iframe, optionall
 
 ### Placing an assignment in `lessons.json`
 
-Add an LTI item that launches WebGrader and selects a built-in via the `exercise` custom parameter. On first launch, that key is copied into the placement Settings when empty.
+**Preferred (built-in catalog):** add an LTI item that launches WebGrader and selects a built-in via the `exercise` custom parameter. On first launch, that key is copied into the placement Settings when empty.
 
 ```json
 {
@@ -43,6 +43,25 @@ Add an LTI item that launches WebGrader and selects a built-in via the `exercise
 - **`resource_link_id`**: stable unique id for this placement in the course.
 - **`target`**: optional; `"_blank"` opens in a new window (common for autograders).
 - **`custom` → `exercise`**: catalog key from the table below. Instructors can still change the assignment later under **Settings**.
+- When Settings / LTI custom are both empty, `?exercise=HeadingsAndParagraphs` (catalog exercise name) seeds Settings the same way.
+
+**Alternate (inline assignment):** full JSON via `config` when link JSON is empty:
+
+```json
+"custom": [
+  {
+    "key": "config",
+    "json": { "...": "assignment object" }
+  }
+]
+```
+
+If the LMS does not handle custom content well, we fall back to a GET parameter:
+
+- For a **built-in**, use `?exercise=<CatalogKey>` (exercise name, e.g. `HeadingsAndParagraphs`) when Settings is empty.
+- For an **inline `config`** assignment, use `?inherit=<resource_link_id>` to reload that block from `$CFG->lessons`.
+
+(First successful load is saved into `lti_link.json` when a link exists.)
 
 | `exercise` value | Settings label |
 |---|---|
