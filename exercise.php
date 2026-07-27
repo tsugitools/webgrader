@@ -115,7 +115,7 @@ function webgrader_decode_exercise_json($raw) {
  * Resolve built-in assignment key.
  *
  * Precedence (tool-local, like ?inherit=):
- *   1. Link Settings already configured
+ *   1. Link Settings already configured (valid catalog key only)
  *   2. LTI custom exercise= (copied into Settings when Settings is empty)
  *   3. ?exercise=CatalogKey when nothing is configured yet
  *
@@ -128,7 +128,11 @@ function webgrader_resolve_exercise_key() {
     $assn = null;
     if ($LINK) {
         $assn = Settings::linkGetCustom('exercise');
-        if ($assn === '0' || $assn === 0 || $assn === false || $assn === '') {
+        // "Please select", empty, or a key not in this tool's catalog (e.g. a
+        // dbgrader name left in Settings / LTI custom) — treat as unset so
+        // ?exercise= can still configure the placement.
+        if ($assn === '0' || $assn === 0 || $assn === false || $assn === ''
+            || !isset($assignments[$assn])) {
             $assn = null;
         }
     }
