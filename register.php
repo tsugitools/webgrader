@@ -17,10 +17,14 @@ $REGISTER_LTI2 = array(
     "source_url" => "https://github.com/tsugitools/webgrader",
     "placements" => array(
     ),
-    // Optional: mstore install shows a dropdown per key; selected values become LTI custom.
+    // Optional: mstore install shows a dropdown; selected value becomes LTI custom.
     // Use the function (not $assignments): register.php is require()'d inside a
     // function, so require_once may skip redefining the $assignments variable.
+    // add_to_get also puts exercise=... on the launch URL (LMS custom fallback).
     "custom" => array(
-        "exercise" => webgrader_assignment_catalog(),
+        "exercise" => array(
+            "add_to_get" => true,
+            "options" => webgrader_assignment_catalog(),
+        ),
     ),
 );
