@@ -6,7 +6,7 @@
  *   1. Built-in key via Settings::linkDefaultConfigurationFromLaunch (Settings / LTI custom / ?exercise=)
  *      (then catalog file / existing link JSON for that built-in)
  *   2. Valid assignment already in lti_link.json
- *   3. Full assignment in LTI custom_config / ?inherit= / ?exercise= as rlid (lessons.json)
+ *   3. Full assignment via Autograder::loadCustomConfig (custom_config / ?inherit= / ?exercise= as rlid)
  *   4. Empty stub
  *
  * On first launch, Settings::linkDefaultConfigurationFromLaunch('exercise', catalog keys) seeds the
@@ -15,10 +15,9 @@
 
 require_once __DIR__ . '/assignments.php';
 
-use \Tsugi\Core\LTIX;
 use \Tsugi\Core\Settings;
 use \Tsugi\Util\U;
-use \Tsugi\UI\Lessons;
+use \Tsugi\Util\Autograder;
 
 /**
  * Cache-bust token for main-thread JS/CSS.
@@ -110,56 +109,6 @@ function webgrader_decode_exercise_json($raw) {
 }
 
 /**
- * Pull full assignment JSON from LTI custom_config, then lessons.json.
- *
- * Lessons lookup uses ?inherit=<resource_link_id>, or if that is absent,
- * ?exercise=<resource_link_id> (same config JSON shape). Built-in catalog
- * keys are handled earlier via Settings::linkDefaultConfigurationFromLaunch().
- */
-function webgrader_load_custom_exercise() {
-    global $CFG;
-
-    $custom = LTIX::ltiCustomGet('config');
-    $exercise = webgrader_decode_exercise_json($custom);
-    if ($exercise) {
-        return $exercise;
-    }
-
-    $rlid = null;
-    if (isset($_GET['inherit']) && is_string($_GET['inherit']) && strlen($_GET['inherit'])) {
-        $rlid = $_GET['inherit'];
-    } else if (isset($_GET['exercise']) && is_string($_GET['exercise']) && strlen($_GET['exercise'])) {
-        $rlid = $_GET['exercise'];
-    }
-
-    if ($rlid && isset($CFG->lessons)) {
-        $lessons = new Lessons($CFG->lessons);
-        if ($lessons) {
-            $lti = $lessons->getLtiByRlid($rlid);
-            if (isset($lti->custom) && is_array($lti->custom)) {
-                foreach ($lti->custom as $c) {
-                    if (isset($c->key, $c->json) && $c->key === 'config') {
-                        if (is_string($c->json)) {
-                            $exercise = webgrader_decode_exercise_json($c->json);
-                        } else {
-                            $asArray = json_decode(json_encode($c->json), true);
-                            if (webgrader_is_valid_exercise($asArray)) {
-                                $exercise = $asArray;
-                            }
-                        }
-                        if ($exercise) {
-                            return $exercise;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return null;
-}
-
-/**
  * Load assignment from link JSON; else custom config; else built-in; else empty.
  *
  * @return array{exercise: array, assignmentKey: ?string}
@@ -211,7 +160,7 @@ function webgrader_load_exercise($LINK) {
         );
     }
 
-    $fromCustom = webgrader_load_custom_exercise();
+    $fromCustom = Autograder::loadCustomConfig('webgrader_is_valid_exercise');
     if ($fromCustom) {
         if ($LINK && method_exists($LINK, 'setJson') && !empty($LINK->id)) {
             $LINK->setJson(json_encode($fromCustom));
