@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WebGrader computed-style vs transform/zoom</title>
+  <script src="../../js/tests.js"></script>
+</head>
+<body>
+  <div id="stage" style="transform: scale(0.833333); transform-origin: top left;">
+    <p id="box" style="border: 2px solid red; width: 100px; height: 40px; margin: 0;">up left</p>
+  </div>
+  <div id="zoom-stage" style="zoom: 0.916665;">
+    <p id="zoom-box" style="border: 2px solid red; width: 100px; height: 40px; margin: 0;">zoomed</p>
+  </div>
+  <pre id="result"></pre>
+  <script>
+    (function () {
+      var T = window.WebGraderTests;
+      var box = document.getElementById('box');
+      var zoomBox = document.getElementById('zoom-box');
+      var cs = getComputedStyle(box);
+      var rect = box.getBoundingClientRect();
+      var visualBorder = (100 + 4) * 0.833333 - 100 * 0.833333;
+
+      var grade = T.handlers.computed_styles_equals(document, {
+        selector: '#box',
+        expected: {
+          'border-top-width': '2px',
+          'border-top-style': 'solid',
+          'border-top-color': 'red'
+        }
+      });
+
+      var widthGrade = T.handlers.computed_style_equals(document, {
+        selector: '#box',
+        property: 'border-top-width',
+        expected: '2px'
+      });
+
+      var zoomGrade = T.handlers.computed_styles_equals(document, {
+        selector: '#zoom-box',
+        expected: {
+          'border-top-width': '2px',
+          'border-top-style': 'solid',
+          'border-top-color': 'red'
+        }
+      });
+
+      var found = T.findTransform(box);
+      var foundZoom = T.findTransform(zoomBox);
+      var computedWidth = parseFloat(cs.borderTopWidth);
+      var zoomComputed = getComputedStyle(zoomBox).borderTopWidth;
+
+      window.__WG_TEST__ = {
+        gradePass: !!grade.pass,
+        gradeDetail: grade.detail,
+        widthPass: !!widthGrade.pass,
+        zoomGradePass: !!zoomGrade.pass,
+        zoomGradeDetail: zoomGrade.detail,
+        zoomComputedBorder: zoomComputed,
+        computedBorderTopWidth: cs.borderTopWidth,
+        computedWidthNumber: computedWidth,
+        widthCloseToTwo: Math.abs(computedWidth - 2) < 0.01,
+        visualWidth: rect.width,
+        visualOneSideBorderApprox: visualBorder / 2,
+        geometryWouldLookLike: parseFloat((visualBorder / 2).toFixed(4)),
+        foundTransform: found ? {
+          id: found.element && found.element.id,
+          tag: found.element && found.element.tagName,
+          transform: found.transform,
+          matrixA: found.matrix && found.matrix.a,
+          matrixD: found.matrix && found.matrix.d
+        } : null,
+        foundZoom: foundZoom ? {
+          id: foundZoom.element && foundZoom.element.id,
+          zoom: foundZoom.zoom,
+          transform: foundZoom.transform
+        } : null,
+        numericRejectsScaledGeometry: T.cssNumericEquals('1.6667px', '2px') === false
+      };
+      document.getElementById('result').textContent = JSON.stringify(window.__WG_TEST__, null, 2);
+    })();
+  </script>
+</body>
+</html>

@@ -85,7 +85,10 @@ $cssEmit = UdemyTestEmitter::emit(array(
     ),
 ));
 assert_true(strpos($cssEmit['js'], 'describe("CSS presentation"') !== false, 'groups CSS suite');
-assert_true(strpos($cssEmit['js'], 'wgNormalizeComputed') !== false, 'includes style helpers');
+assert_true(strpos($cssEmit['js'], 'wgComputedEqual') !== false, 'includes computed-equal helper');
+assert_true(strpos($cssEmit['js'], 'wgCssNumericEquals') !== false, 'includes numeric length helper');
+assert_true(strpos($cssEmit['js'], 'wgFindTransform') !== false, 'includes transform walk helper');
+assert_true(strpos($cssEmit['js'], 'wgResolveValue') !== false, 'includes same-document length probe');
 
 $jsEmit = UdemyTestEmitter::emit(array(
     array(

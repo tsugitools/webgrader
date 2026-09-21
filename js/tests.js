@@ -128,18 +128,16 @@
                 return { pass: false, detail: 'Cannot read computed style (no window)' };
             }
             var prop = String(test.property).trim();
+            // CSS properties come from getComputedStyle, never from
+            // getBoundingClientRect() / rendered geometry (transforms scale those).
             var actual = win.getComputedStyle(el).getPropertyValue(prop).trim();
             var expected = String(test.expected).trim();
-            if (isColorProperty(prop)) {
-                actual = normalizeCssColor(doc, actual);
-                expected = normalizeCssColor(doc, expected);
-            } else if (isOffsetProperty(prop)) {
-                actual = normalizeCssOffset(actual);
-                expected = normalizeCssOffset(expected);
-            }
+            logEffectiveZoom(doc, el);
+            var pass = computedValuesEqual(doc, prop, actual, expected, el);
             return {
-                pass: actual === expected,
+                pass: pass,
                 detail: 'Got "' + actual + '", expected "' + expected + '"'
+                    + transformNote(el, win)
             };
         },
         /**
@@ -167,30 +165,25 @@
                 err2.code = 'config';
                 throw err2;
             }
+            logEffectiveZoom(doc, el);
             var mismatches = [];
             props.forEach(function (prop) {
                 var actual = cs.getPropertyValue(prop).trim();
                 var expected = String(test.expected[prop]).trim();
-                if (isColorProperty(prop)) {
-                    actual = normalizeCssColor(doc, actual);
-                    expected = normalizeCssColor(doc, expected);
-                } else if (isOffsetProperty(prop)) {
-                    actual = normalizeCssOffset(actual);
-                    expected = normalizeCssOffset(expected);
-                }
-                if (actual !== expected) {
+                if (!computedValuesEqual(doc, prop, actual, expected, el)) {
                     mismatches.push(prop + ': got "' + actual + '", expected "' + expected + '"');
                 }
             });
+            var note = transformNote(el, win);
             if (!mismatches.length) {
                 return {
                     pass: true,
-                    detail: 'Matched ' + props.join(', ')
+                    detail: 'Matched ' + props.join(', ') + note
                 };
             }
             return {
                 pass: false,
-                detail: mismatches.join('; ')
+                detail: mismatches.join('; ') + note
             };
         },
         /**
@@ -378,11 +371,223 @@
         return p === 'top' || p === 'right' || p === 'bottom' || p === 'left';
     }
 
+    function isTransformProperty(prop) {
+        return String(prop || '').toLowerCase() === 'transform';
+    }
+
     /** Treat bare 0 the same as 0px for corner offsets. */
     function normalizeCssOffset(value) {
         var v = String(value || '').trim().toLowerCase();
         if (v === '0') return '0px';
         return v;
+    }
+
+    /**
+     * Numeric CSS lengths (border-width, etc.) compare with a small epsilon.
+     * Do not scale these values by any CSS transform — getComputedStyle is
+     * authoritative. Returns null when either side is not a CSS number.
+     */
+    function cssNumericEquals(actual, expected, epsilon) {
+        epsilon = epsilon == null ? 0.01 : epsilon;
+        var aStr = String(actual == null ? '' : actual).trim();
+        var eStr = String(expected == null ? '' : expected).trim();
+        if (!/^[-+]?\d/.test(aStr) || !/^[-+]?\d/.test(eStr)) return null;
+        var aNum = parseFloat(aStr);
+        var eNum = parseFloat(eStr);
+        if (!isFinite(aNum) || !isFinite(eNum)) return null;
+        var aUnit = aStr.replace(/^[-+]?\d*\.?\d+(e[-+]?\d+)?/i, '').trim().toLowerCase();
+        var eUnit = eStr.replace(/^[-+]?\d*\.?\d+(e[-+]?\d+)?/i, '').trim().toLowerCase();
+        if (aUnit === '' && eUnit === 'px') aUnit = 'px';
+        if (eUnit === '' && aUnit === 'px') eUnit = 'px';
+        if (aUnit !== eUnit) return false;
+        return Math.abs(aNum - eNum) < epsilon;
+    }
+
+    function parseDomMatrix(transform, win) {
+        if (!transform || transform === 'none') return null;
+        var DM = (win && win.DOMMatrix)
+            || (typeof DOMMatrix === 'function' ? DOMMatrix : null);
+        if (!DM) return null;
+        try {
+            return new DM(transform);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function matricesEqual(a, b, epsilon) {
+        epsilon = epsilon == null ? 0.01 : epsilon;
+        if (!a || !b) return false;
+        return Math.abs(a.a - b.a) < epsilon
+            && Math.abs(a.b - b.b) < epsilon
+            && Math.abs(a.c - b.c) < epsilon
+            && Math.abs(a.d - b.d) < epsilon
+            && Math.abs(a.e - b.e) < epsilon
+            && Math.abs(a.f - b.f) < epsilon;
+    }
+
+    /**
+     * Walk from the target up through ancestors and return the first
+     * non-none CSS transform, individual scale, or non-1 zoom.
+     * Parsed with DOMMatrix when available.
+     * Detection is diagnostic only — it does not change CSS-property grades.
+     */
+    function findTransform(element, win) {
+        var el = element;
+        var doc = el && el.ownerDocument;
+        var view = win || (doc && doc.defaultView);
+        if (!el || !view || !view.getComputedStyle) return null;
+
+        while (el && el.nodeType === 1) {
+            var style = view.getComputedStyle(el);
+            var transform = style && style.transform;
+            if (transform && transform !== 'none') {
+                return {
+                    element: el,
+                    transform: transform,
+                    matrix: parseDomMatrix(transform, view)
+                };
+            }
+            var zoom = style && style.zoom;
+            if (zoom && zoom !== 'normal') {
+                var zNum = parseFloat(zoom);
+                if (isFinite(zNum) && Math.abs(zNum - 1) > 0.001 && Math.abs(zNum - 100) > 0.001) {
+                    return {
+                        element: el,
+                        transform: 'zoom(' + zoom + ')',
+                        matrix: null,
+                        zoom: zoom
+                    };
+                }
+            }
+            var scale = style && style.scale;
+            if (scale && scale !== 'none') {
+                return {
+                    element: el,
+                    transform: 'scale(' + scale + ')',
+                    matrix: parseDomMatrix('scale(' + scale + ')', view)
+                };
+            }
+            el = el.parentElement;
+        }
+        return null;
+    }
+
+    function describeElement(el) {
+        if (!el) return 'element';
+        var tag = (el.tagName || 'element').toLowerCase();
+        if (el.id) return tag + '#' + el.id;
+        var cls = '';
+        if (typeof el.className === 'string' && el.className.trim()) {
+            cls = '.' + el.className.trim().split(/\s+/)[0];
+        }
+        return tag + cls;
+    }
+
+    function transformNote(element, win) {
+        var info = findTransform(element, win);
+        if (!info) return '';
+        var kind = info.zoom ? 'zoom' : 'transform';
+        var value = info.zoom || info.transform;
+        return ' [' + kind + ' on ' + describeElement(info.element)
+            + ': ' + value + ']';
+    }
+
+    /**
+     * Used-px / specified-px in the same subtree the grader compares against.
+     */
+    function measureEffectiveZoom(doc, contextEl) {
+        var specified = 100;
+        var resolved = resolveCssValue(doc, contextEl, 'border-top-width', specified + 'px');
+        var used = parseFloat(resolved);
+        if (!isFinite(used) || specified === 0) return 1;
+        return used / specified;
+    }
+
+    function logEffectiveZoom(doc, contextEl) {
+        var zoom = measureEffectiveZoom(doc, contextEl);
+        var msg = 'WebGrader effective zoom: ' + zoom;
+        try {
+            console.log(msg);
+        } catch (e) { /* ignore */ }
+        try {
+            if (global.WebGraderConsole && typeof global.WebGraderConsole.append === 'function') {
+                global.WebGraderConsole.append({ level: 'log', message: msg });
+            }
+        } catch (e2) { /* ignore */ }
+        return zoom;
+    }
+
+    /**
+     * Resolve an expected CSS value in the target's document/subtree so
+     * browser zoom and ancestor CSS zoom apply equally to both sides.
+     * Does not multiply/divide by a transform matrix.
+     */
+    function resolveCssValue(doc, contextEl, prop, value) {
+        var raw = String(value == null ? '' : value).trim();
+        var win = doc && doc.defaultView;
+        if (!raw || !doc || !doc.createElement || !win || !win.getComputedStyle) {
+            return raw;
+        }
+        var parent = contextEl && contextEl.nodeType === 1 ? contextEl : doc.body;
+        if (!parent) return raw;
+        var probe = doc.createElement('wg-probe');
+        probe.setAttribute('aria-hidden', 'true');
+        probe.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;'
+            + 'pointer-events:none;display:block;';
+        probe.style.setProperty(prop, raw, 'important');
+        var p = String(prop || '').toLowerCase();
+        if (p.indexOf('border') !== -1 && p.indexOf('width') !== -1) {
+            probe.style.setProperty('border-style', 'solid', 'important');
+        }
+        if (isOffsetProperty(prop)) {
+            probe.style.setProperty('position', 'fixed', 'important');
+        }
+        parent.appendChild(probe);
+        var resolved = win.getComputedStyle(probe).getPropertyValue(prop).trim();
+        parent.removeChild(probe);
+        return resolved || raw;
+    }
+
+    function transformValuesEqual(doc, actual, expected) {
+        actual = String(actual || '').trim();
+        expected = String(expected || '').trim();
+        if (actual === expected) return true;
+        var aNone = !actual || actual === 'none';
+        var eNone = !expected || expected === 'none';
+        if (aNone || eNone) return aNone && eNone;
+        var win = doc && doc.defaultView;
+        return matricesEqual(
+            parseDomMatrix(actual, win),
+            parseDomMatrix(expected, win)
+        );
+    }
+
+    /**
+     * Compare one computed CSS property. Lengths use a 0.01px epsilon after
+     * resolving the expected value in the same document/subtree (so zoom
+     * affects both sides). Transform is compared via DOMMatrix when asked.
+     */
+    function computedValuesEqual(doc, prop, actual, expected, contextEl) {
+        actual = String(actual || '').trim();
+        expected = String(expected || '').trim();
+        if (isColorProperty(prop)) {
+            return normalizeCssColor(doc, actual) === normalizeCssColor(doc, expected);
+        }
+        if (isTransformProperty(prop)) {
+            return transformValuesEqual(doc, actual, expected);
+        }
+        if (isOffsetProperty(prop)) {
+            actual = normalizeCssOffset(actual);
+            expected = normalizeCssOffset(expected);
+        }
+        var resolved = resolveCssValue(doc, contextEl, prop, expected);
+        if (isOffsetProperty(prop)) {
+            resolved = normalizeCssOffset(resolved);
+        }
+        var numeric = cssNumericEquals(actual, resolved, 0.01);
+        if (numeric !== null) return numeric;
+        return actual === resolved || actual === expected;
     }
 
     /**
@@ -656,6 +861,9 @@
     global.WebGraderTests = {
         runTests: runTests,
         handlers: handlers,
-        orderTestsForGrading: orderTestsForGrading
+        orderTestsForGrading: orderTestsForGrading,
+        findTransform: findTransform,
+        cssNumericEquals: cssNumericEquals,
+        computedValuesEqual: computedValuesEqual
     };
 })(window);

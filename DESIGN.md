@@ -361,10 +361,11 @@ Declarative handlers in `js/tests.js` (plus optional validator modules):
 
 ### CSS
 
-- `computed_style_equals`, `computed_styles_equals`
+- `computed_style_equals`, `computed_styles_equals` — `getComputedStyle()`; lengths compare with a 0.01px epsilon and are not scaled by CSS transforms
 - `css_validate` — css-tree from pinned CDN
 - `css_rule_declares` — selector/property/value in CSS source (for `:hover` / `:visited` / `:active`)
-- visibility / geometry helpers as implemented in `tests.js`
+- ancestor `transform` is reported for diagnostics (`findTransform` + `DOMMatrix`) and does not fail a CSS-property check unless the assignment tests `transform` itself
+- rendered-size / layout checks (when an assignment asks for them) use `getBoundingClientRect()`, not computed border/width values
 
 ### JavaScript / interaction
 

@@ -58,11 +58,117 @@ function normalizeColor(doc, win, value) {
   return (resolved || raw).trim();
 }
 
-function normalizeComputed(doc, win, prop, value) {
-  let v = String(value || '').trim();
-  if (isColorProperty(prop)) return normalizeColor(doc, win, v);
-  if (isOffsetProperty(prop)) return normalizeOffset(v);
-  return v;
+function cssNumericEquals(actual, expected, epsilon = 0.01) {
+  const aStr = String(actual == null ? '' : actual).trim();
+  const eStr = String(expected == null ? '' : expected).trim();
+  if (!/^[-+]?\d/.test(aStr) || !/^[-+]?\d/.test(eStr)) return null;
+  const aNum = parseFloat(aStr);
+  const eNum = parseFloat(eStr);
+  if (!Number.isFinite(aNum) || !Number.isFinite(eNum)) return null;
+  let aUnit = aStr.replace(/^[-+]?\d*\.?\d+(e[-+]?\d+)?/i, '').trim().toLowerCase();
+  let eUnit = eStr.replace(/^[-+]?\d*\.?\d+(e[-+]?\d+)?/i, '').trim().toLowerCase();
+  if (aUnit === '' && eUnit === 'px') aUnit = 'px';
+  if (eUnit === '' && aUnit === 'px') eUnit = 'px';
+  if (aUnit !== eUnit) return false;
+  return Math.abs(aNum - eNum) < epsilon;
+}
+
+function parseDomMatrix(win, transform) {
+  if (!transform || transform === 'none') return null;
+  const DM = win.DOMMatrix;
+  if (typeof DM !== 'function') return null;
+  try {
+    return new DM(transform);
+  } catch {
+    return null;
+  }
+}
+
+function findTransform(win, element) {
+  let el = element;
+  while (el && el.nodeType === 1) {
+    const style = win.getComputedStyle(el);
+    const transform = style && style.transform;
+    if (transform && transform !== 'none') {
+      return {
+        element: el,
+        transform,
+        matrix: parseDomMatrix(win, transform),
+      };
+    }
+    const zoom = style && style.zoom;
+    if (zoom && zoom !== 'normal') {
+      const zNum = parseFloat(zoom);
+      if (Number.isFinite(zNum) && Math.abs(zNum - 1) > 0.001) {
+        return {
+          element: el,
+          transform: 'zoom(' + zoom + ')',
+          matrix: null,
+          zoom,
+        };
+      }
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function resolveCssValue(doc, win, contextEl, prop, value) {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw || !doc.createElement || !win.getComputedStyle) return raw;
+  const parent = contextEl && contextEl.nodeType === 1 ? contextEl : doc.body;
+  if (!parent) return raw;
+  const probe = doc.createElement('wg-probe');
+  probe.style.cssText = 'position:absolute;left:-9999px;visibility:hidden;display:block;';
+  probe.style.setProperty(prop, raw, 'important');
+  const p = String(prop || '').toLowerCase();
+  if (p.includes('border') && p.includes('width')) {
+    probe.style.setProperty('border-style', 'solid', 'important');
+  }
+  if (isOffsetProperty(prop)) {
+    probe.style.setProperty('position', 'fixed', 'important');
+  }
+  parent.appendChild(probe);
+  const resolved = win.getComputedStyle(probe).getPropertyValue(prop).trim();
+  parent.removeChild(probe);
+  return resolved || raw;
+}
+
+function computedEqual(doc, win, prop, actual, expected, contextEl) {
+  let a = String(actual || '').trim();
+  let e = String(expected || '').trim();
+  if (isColorProperty(prop)) {
+    return normalizeColor(doc, win, a) === normalizeColor(doc, win, e);
+  }
+  if (String(prop || '').toLowerCase() === 'transform') {
+    if (a === e) return true;
+    const aNone = !a || a === 'none';
+    const eNone = !e || e === 'none';
+    if (aNone || eNone) return aNone && eNone;
+    const am = parseDomMatrix(win, a);
+    const em = parseDomMatrix(win, e);
+    if (!am || !em) return a === e;
+    return Math.abs(am.a - em.a) < 0.01 && Math.abs(am.b - em.b) < 0.01
+      && Math.abs(am.c - em.c) < 0.01 && Math.abs(am.d - em.d) < 0.01
+      && Math.abs(am.e - em.e) < 0.01 && Math.abs(am.f - em.f) < 0.01;
+  }
+  if (isOffsetProperty(prop)) {
+    a = normalizeOffset(a);
+    e = normalizeOffset(e);
+  }
+  const resolved = resolveCssValue(doc, win, contextEl, prop, e);
+  const resolvedOff = isOffsetProperty(prop) ? normalizeOffset(resolved) : resolved;
+  const numeric = cssNumericEquals(a, resolvedOff, 0.01);
+  if (numeric !== null) return numeric;
+  return a === resolvedOff || a === e;
+}
+
+function transformNote(win, el) {
+  const info = findTransform(win, el);
+  if (!info) return '';
+  const tag = (info.element.tagName || 'element').toLowerCase();
+  const who = info.element.id ? tag + '#' + info.element.id : tag;
+  return ' [transform on ' + who + ': ' + info.transform + ']';
 }
 
 function runTest(dom, test) {
@@ -110,11 +216,10 @@ function runTest(dom, test) {
     const prop = String(test.property || '').trim();
     const actual = win.getComputedStyle(el).getPropertyValue(prop).trim();
     const expected = String(test.expected || '').trim();
-    const a = normalizeComputed(doc, win, prop, actual);
-    const e = normalizeComputed(doc, win, prop, expected);
+    const pass = computedEqual(doc, win, prop, actual, expected, el);
     return {
-      pass: a === e,
-      detail: 'Got "' + a + '", expected "' + e + '"',
+      pass,
+      detail: 'Got "' + actual + '", expected "' + expected + '"' + transformNote(win, el),
     };
   }
 
@@ -125,15 +230,14 @@ function runTest(dom, test) {
     for (const prop of Object.keys(expected)) {
       const actual = cs.getPropertyValue(prop).trim();
       const exp = String(expected[prop]).trim();
-      const a = normalizeComputed(doc, win, prop, actual);
-      const e = normalizeComputed(doc, win, prop, exp);
-      if (a !== e) {
-        mismatches.push(prop + ': got "' + a + '", expected "' + e + '"');
+      if (!computedEqual(doc, win, prop, actual, exp, el)) {
+        mismatches.push(prop + ': got "' + actual + '", expected "' + exp + '"');
       }
     }
+    const note = transformNote(win, el);
     return {
       pass: mismatches.length === 0,
-      detail: mismatches.length ? mismatches.join('; ') : 'Matched',
+      detail: (mismatches.length ? mismatches.join('; ') : 'Matched') + note,
     };
   }
 
